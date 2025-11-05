@@ -199,14 +199,10 @@ def analyze_file(filename, show_linebreaks=False):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python lexer.py <filename.lol> [--show-linebreaks]")
-        sys.exit(1)
-    
     filename = sys.argv[1]
     show_linebreaks = '--show-linebreaks' in sys.argv
     
     if not filename.endswith('.lol'):
-        print("Warning: File does not have .lol extension")
+        print("Error reading file (only .lol files)")
     
     analyze_file(filename, show_linebreaks)
