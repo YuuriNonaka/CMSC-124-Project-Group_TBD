@@ -13,7 +13,7 @@ def remove_comments(line):
         return line[:match.start()].rstrip()
     return line
 
-def classify_identifier(lexeme, prev_tokens, next_pos, line):
+def classify_identifier(prev_tokens):
     
     if not prev_tokens:
         return TokenType.VARIDENT
@@ -75,7 +75,7 @@ def tokenize_line(line, line_num, all_tokens_so_far=None):
                 #if regular identifier then figure out what kind it is
                 if token_type == TokenType.VARIDENT:
                     context_tokens = all_tokens_so_far + tokens
-                    token_type = classify_identifier(lexeme, context_tokens, pos, line)
+                    token_type = classify_identifier(context_tokens)
                 
                 tokens.append((lexeme, token_type, line_num))
                 pos = match.end()
