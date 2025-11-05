@@ -1,13 +1,7 @@
-"""
-lol_tokens.py
-Token definitions and regex patterns for LOLCode lexical analyzer
-"""
-
 import re
 from enum import Enum
 
 class TokenType(Enum):
-    """enumeration of all token types in lolcode"""
     #program structure
     HAI = "HAI"
     KTHXBYE = "KTHXBYE"
@@ -106,6 +100,9 @@ class TokenType(Enum):
     VARIDENT = "Variable Identifier"
     FUNCIDENT = "Function Identifier"
     LABEL = "Loop Label"
+
+    #special tokens
+    LINEBREAK = "Line Break"
     
     #comments (for tracking, but ignored in output)
     COMMENT = "Comment"
