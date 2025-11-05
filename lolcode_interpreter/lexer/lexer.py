@@ -9,12 +9,43 @@ def remove_comments(line):
     match = btw_pattern.search(line)
     
     if match:
-        #preserve everything before btw
+        #keep everything before the BTW
         return line[:match.start()].rstrip()
     return line
 
+def classify_identifier(lexeme, prev_tokens, next_pos, line):
+    
+    if not prev_tokens:
+        return TokenType.VARIDENT
+    
+    #check the last token
+    last_token = prev_tokens[-1][1]
+    
+    #function definition
+    if last_token == TokenType.HOW_IZ_I:
+        return TokenType.FUNCIDENT
+    
+    #function call
+    if last_token == TokenType.I_IZ:
+        return TokenType.FUNCIDENT
+    
+    #loop label start
+    if last_token == TokenType.IM_IN_YR:
+        return TokenType.LABEL
+    
+    #loop label end
+    if last_token == TokenType.IM_OUTTA_YR:
+        return TokenType.LABEL
+    
+    #defaul
+    return TokenType.VARIDENT
 
-def tokenize_line(line, line_num):
+
+def tokenize_line(line, line_num, all_tokens_so_far=None):
+    #tokenize one line at a time
+    if all_tokens_so_far is None:
+        all_tokens_so_far = []
+
     tokens = []
     line = line.strip()
     
@@ -29,24 +60,30 @@ def tokenize_line(line, line_num):
     
     pos = 0
     while pos < len(line):
-        #skip whitespace
+        #skip spaces
         if line[pos].isspace():
             pos += 1
             continue
         
-        #try to match against each pattern
+        #try matching with our patterns
         matched = False
         for pattern, token_type in COMPILED_PATTERNS:
             match = pattern.match(line, pos)
             if match:
                 lexeme = match.group(0)
+
+                #if regular identifier then figure out what kind it is
+                if token_type == TokenType.VARIDENT:
+                    context_tokens = all_tokens_so_far + tokens
+                    token_type = classify_identifier(lexeme, context_tokens, pos, line)
+                
                 tokens.append((lexeme, token_type, line_num))
                 pos = match.end()
                 matched = True
                 break
         
         if not matched:
-            #unknown token - grab the next non-whitespace sequence
+            #cant match this token then just grab as unknown
             end_pos = pos + 1
             while end_pos < len(line) and not line[end_pos].isspace():
                 end_pos += 1
@@ -82,40 +119,64 @@ def tokenize_program(source_code):
         if in_multiline_comment:
             line_num += 1
             continue
+
+        #tokenize this line
+        line_tokens = tokenize_line(line, line_num, tokens)
         
-        #tokenize the line
-        line_tokens = tokenize_line(line, line_num)
-        tokens.extend(line_tokens)
+        #add tokens and a linebreak
+        if line_tokens:
+            tokens.extend(line_tokens)
+            #add linebreak after each line
+            tokens.append(('\\n', TokenType.LINEBREAK, line_num))
+
         line_num += 1
+
+    #remove the last linebreak if theres one
+    if tokens and tokens[-1][1] == TokenType.LINEBREAK:
+        tokens.pop()
     
     return tokens
 
 
-def print_tokens_table(tokens):
+def print_tokens_table(tokens, show_linebreaks=False):
+    #print the tokens
     if not tokens:
         print("No tokens found.")
         return
     
-    #calculate column widths
-    max_lexeme = max(len(str(t[0])) for t in tokens)
-    max_type = max(len(str(t[1].value)) for t in tokens)
+    #hide linebreaks
+    display_tokens = tokens if show_linebreaks else [t for t in tokens if t[1] != TokenType.LINEBREAK]
+    
+    if not display_tokens:
+        print("No tokens found.")
+        return
+    
+    #column widths
+    max_lexeme = max(len(str(t[0])) for t in display_tokens)
+    max_type = max(len(str(t[1].value)) for t in display_tokens)
     max_lexeme = max(max_lexeme, len("Lexeme"))
     max_type = max(max_type, len("Classification"))
     
-    #print header
+    #print the header
     print("\n" + "="*80)
     print(f"{'Lexeme':<{max_lexeme}}  {'Classification':<{max_type}}  Line")
     print("="*80)
     
-    #print tokens
-    for lexeme, token_type, line_num in tokens:
+    #print each token
+    for lexeme, token_type, line_num in display_tokens:
         print(f"{lexeme:<{max_lexeme}}  {token_type.value:<{max_type}}  {line_num}")
     
     print("="*80)
-    print(f"Total tokens: {len(tokens)}\n")
+    print(f"Total tokens: {len(display_tokens)}")
+    if not show_linebreaks:
+        linebreak_count = len(tokens) - len(display_tokens)
+        if linebreak_count > 0:
+            print(f"(Linebreak tokens hidden: {linebreak_count})")
+    print()
 
 
-def analyze_file(filename):
+def analyze_file(filename, show_linebreaks=False):
+    #read and analyze the lolcode file
     try:
         with open(filename, 'r', encoding='utf-8') as f:
             source_code = f.read()
@@ -125,7 +186,7 @@ def analyze_file(filename):
         print(f"{'='*80}")
         
         tokens = tokenize_program(source_code)
-        print_tokens_table(tokens)
+        print_tokens_table(tokens, show_linebreaks)
         
         return tokens
         
@@ -136,13 +197,16 @@ def analyze_file(filename):
         print(f"Error reading file: {e}")
         sys.exit(1)
 
-if len(sys.argv) != 2:
-    print("Usage: python lexer.py <filename.lol>")
-    sys.exit(1)
 
-filename = sys.argv[1]
-
-if not filename.endswith('.lol'):
-    print("Warning: File does not have .lol extension")
-
-analyze_file(filename)
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python lexer.py <filename.lol> [--show-linebreaks]")
+        sys.exit(1)
+    
+    filename = sys.argv[1]
+    show_linebreaks = '--show-linebreaks' in sys.argv
+    
+    if not filename.endswith('.lol'):
+        print("Warning: File does not have .lol extension")
+    
+    analyze_file(filename, show_linebreaks)
