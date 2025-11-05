@@ -186,8 +186,8 @@ TOKEN_PATTERNS = [
 
 
 def compile_patterns():
-    """compile all regex patterns for efficiency"""
-    return [(re.compile(pattern), token_type) for pattern, token_type in TOKEN_PATTERNS]
+    #compile all regex patterns for efficiency
+    return [(re.compile(pattern, re.IGNORECASE), token_type) for pattern, token_type in TOKEN_PATTERNS]
 
 
 COMPILED_PATTERNS = compile_patterns()
