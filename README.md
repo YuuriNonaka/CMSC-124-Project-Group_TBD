@@ -6,26 +6,94 @@ A comprehensive interpreter for the LOLCode esoteric programming language, devel
 
 This interpreter implements lexical, syntactical, and semantic analysis for LOLCode programs (.lol files). The project follows the specifications outlined in the CMSC 124 project requirements and aims to create a fully functional interpreter with a graphical user interface.
 
-### Current Status: **Lexical Analysis Complete** ✓
+### Current Status: **Lexical Analysis Complete + GUI Implemented** ✔
 
-The lexer is fully implemented and can tokenize LOLCode programs according to the language specifications.
+The lexer is fully implemented and can tokenize LOLCode programs according to the language specifications. A graphical user interface has been added for easier interaction with the interpreter.
 
 ## Project Structure
 
 ```
 lolcode_interpreter/
 ├── lexer/
+│   ├── __init__.py        # Package initializer - exports tokenize_program and TokenType
 │   ├── lexer.py           # Main lexical analyzer
 │   └── lol_tokens.py      # Token definitions and patterns
 ├── test_cases/
 │   ├── 01_variables.lol   # Test: Variable declarations
 │   ├── 02_gimmeh.lol      # Test: User input
 │   └── ...                # Additional test files
+├── lolcode_gui.py         # GUI application
 ├── .gitignore
 └── README.md
 ```
 
+## Quick Start
+
+### Running the GUI (Recommended)
+```bash
+python lolcode_gui.py
+```
+
+### Running the CLI Lexer
+```bash
+python lexer/lexer.py test_cases/01_variables.lol [--show-linebreaks]
+```
+
+## GUI Features
+
+The graphical interface provides an integrated development environment for LOLCode:
+
+### Functional Features ✅
+- **Text Editor Panel** - Edit LOLCode source code with syntax support
+- **File Operations** - Open, Save, and Save As functionality with keyboard shortcuts
+- **Lexemes Table** - View tokenized output after lexical analysis
+- **File Path Display** - Shows currently loaded file
+- **Execute Button** - Run lexical analysis on the current code
+
+### Placeholder Features (Coming Soon) 🔲
+- **Symbol Table** - Will display variable declarations and values
+- **Console Output** - Will show program execution results and I/O
+
+### Keyboard Shortcuts
+- `Ctrl+O` - Open file
+- `Ctrl+S` - Save file
+- `Ctrl+Shift+S` - Save as new file
+
 ## File Descriptions
+
+### `lolcode_gui.py` (NEW)
+The main GUI application built with tkinter.
+
+**Key Components:**
+- **LOLCodeInterpreterGUI Class**: Main application class
+  - `create_menu()` - Sets up File menu and keyboard shortcuts
+  - `create_text_editor()` - Text editing area for LOLCode source
+  - `create_lexemes_table()` - Displays tokens in a tabular format
+  - `create_symbol_table()` - Placeholder for future symbol table implementation
+  - `execute()` - Runs lexical analysis and updates the lexemes table
+  - `open_file()` / `save_file()` / `save_file_as()` - File operations
+
+**GUI Layout:**
+```
+┌─────────────────────────────────────────────────────┐
+│ File Menu                                           │
+├─────────────────────────────────────────────────────┤
+│ File Path: (None)                                   │
+├──────────────┬──────────────────┬───────────────────┤
+│              │    Lexemes       │  SYMBOL TABLE     │
+│              ├──────────────────┤                   │
+│              │ Lexeme | Class   │  Identifier|Value │
+│  Text Editor │ ─────────────────│  ──────────────── │
+│              │  HAI   | HAI     │  (placeholder)    │
+│              │  ...   | ...     │                   │
+│              │                  │                   │
+├──────────────┴──────────────────┴───────────────────┤
+│                  [ EXECUTE ]                        │
+├─────────────────────────────────────────────────────┤
+│ Console Output (placeholder)                        │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
 
 ### `lexer/lol_tokens.py`
 Defines the token types and regular expression patterns for LOLCode lexemes.
@@ -98,9 +166,9 @@ Implements the lexical analysis engine that converts LOLCode source into tokens.
    - Handles file not found and general errors
    - Returns the token list
 
-**Usage:**
+**CLI Usage:**
 ```bash
-python lexer.py <filename.lol> [--show-linebreaks]
+python lexer/lexer.py <filename.lol> [--show-linebreaks]
 ```
 
 ## LOLCode Language Specifications
@@ -193,6 +261,15 @@ I IZ <funcname> [YR <arg1> [AN YR <arg2> ...]] MKAY
 
 5. **Line Tracking**: Each token records its line number for error reporting
 
+### GUI Integration
+
+The GUI integrates with the lexer by:
+1. Adding the `lexer/` directory to Python's module search path
+2. Importing `tokenize_program()` function directly
+3. Passing editor content to the tokenizer
+4. Displaying results in a formatted table
+5. Filtering out LINEBREAK tokens for cleaner display
+
 ## Testing
 
 Test cases are organized in the `test_cases/` directory, covering:
@@ -204,12 +281,24 @@ Test cases are organized in the `test_cases/` directory, covering:
 - Functions
 - Edge cases and error conditions
 
+**To test with GUI:**
+1. Launch `python lolcode_gui.py`
+2. Open a test file from `test_cases/`
+3. Click EXECUTE
+4. View tokens in the Lexemes table
+
+**To test with CLI:**
+```bash
+python lexer/lexer.py test_cases/01_variables.lol
+```
+
 ## Next Steps
 
-### Phase 2: Syntax Analysis (Parser)
+### Phase 2: Syntax Analysis (Parser) - IN PROGRESS
 - Implement grammar rules for LOLCode
 - Build Abstract Syntax Tree (AST)
 - Validate program structure
+- Integrate with GUI
 
 ### Phase 3: Semantic Analysis
 - Type checking and inference
@@ -217,13 +306,13 @@ Test cases are organized in the `test_cases/` directory, covering:
 - Expression evaluation
 - Runtime error detection
 
-### Phase 4: GUI Implementation
-- File explorer for loading .lol files
-- Text editor for code viewing/editing
-- Token list display
-- Symbol table display
-- Console for I/O
-- Execute/Run functionality
+### Phase 4: Complete GUI Implementation
+- ✅ File explorer for loading .lol files (DONE)
+- ✅ Text editor for code viewing/editing (DONE)
+- ✅ Token list display (DONE)
+- ⬜ Symbol table display (parser required)
+- ⬜ Console for I/O (interpreter required)
+- ⬜ Execute/Run functionality (interpreter required)
 
 ## Project Requirements
 
@@ -237,11 +326,12 @@ Test cases are organized in the `test_cases/` directory, covering:
 When continuing work on this codebase:
 
 1. **Lexer is complete** - Focus on parser/semantic analysis next
-2. **Follow the pattern ordering** in `lol_tokens.py` - order matters!
-3. **Context is key** - The `classify_identifier` function shows how to use previous tokens for disambiguation
-4. **Test incrementally** - Use the test cases to verify each feature
-5. **Maintain token structure** - (lexeme, TokenType, line_number) tuples throughout
-6. **Refer to specifications** - The project specs PDF contains authoritative language rules
+2. **GUI framework ready** - Add parser and interpreter integration
+3. **Follow the pattern ordering** in `lol_tokens.py` - order matters!
+4. **Context is key** - The `classify_identifier` function shows how to use previous tokens for disambiguation
+5. **Test incrementally** - Use the test cases to verify each feature
+6. **Maintain token structure** - (lexeme, TokenType, line_number) tuples throughout
+7. **Refer to specifications** - The project specs PDF contains authoritative language rules
 
 ### Common Issues to Watch
 
@@ -249,13 +339,10 @@ When continuing work on this codebase:
 - NOOB appears in both literals and type keywords - pattern order handles this
 - Identifiers need contextual classification based on preceding tokens
 - Linebreak tokens are added but can be hidden in output
+- GUI imports require the lexer directory to be in Python's path
 
-## License
+## Dependencies
 
-Academic project for CMSC 124, UP Los Baños
-
-## Contact
-
-Institute of Computer Science  
-College of Arts and Sciences  
-University of the Philippines Los Baños
+- Python 3.x
+- tkinter (usually included with Python)
+- No external packages required
