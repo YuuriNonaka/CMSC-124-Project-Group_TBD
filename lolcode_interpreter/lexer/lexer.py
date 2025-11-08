@@ -1,6 +1,10 @@
 import re
 import sys
-from lol_tokens import TokenType, COMPILED_PATTERNS
+
+try:
+    from .lol_tokens import TokenType, COMPILED_PATTERNS
+except ImportError:
+    from lol_tokens import TokenType, COMPILED_PATTERNS
 
 
 def remove_comments(line):
