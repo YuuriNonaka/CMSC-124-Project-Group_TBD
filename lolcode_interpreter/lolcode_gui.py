@@ -3,16 +3,14 @@ from tkinter import ttk, filedialog, messagebox
 import sys
 import os
 
-# Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Add script directory to path (for package imports)
 if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
 try:
-    #try importing the lexer package
     from lexer import tokenize_program, TokenType
+    from lexer.lol_tokens import TOKEN_DESCRIPTIONS
 
 except ImportError as e:
     print("\n========== IMPORT ERROR DEBUG ==========")
@@ -358,7 +356,7 @@ class LOLCodeInterpreterGUI:
             self.lexemes_tree.insert(
                 '',
                 tk.END,
-                values=(lexeme, token_type.value),
+                values=(lexeme, TOKEN_DESCRIPTIONS.get(token_type, token_type.value)),
                 tags=(tag,)
             )
     
