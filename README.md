@@ -17,7 +17,7 @@ lolcode_interpreter/
 ├── lexer/
 │   ├── __init__.py        # Package initializer - exports tokenize_program and TokenType
 │   ├── lexer.py           # Main lexical analyzer
-│   └── lol_tokens.py      # Token definitions and patterns
+│   └── lol_tokens.py      # Token definitions, patterns, and human-readable descriptions
 ├── test_cases/
 │   ├── 01_variables.lol   # Test: Variable declarations
 │   ├── 02_gimmeh.lol      # Test: User input
@@ -46,9 +46,16 @@ The graphical interface provides an integrated development environment for LOLCo
 ### Functional Features ✅
 - **Text Editor Panel** - Edit LOLCode source code with syntax support
 - **File Operations** - Open, Save, and Save As functionality with keyboard shortcuts
-- **Lexemes Table** - View tokenized output after lexical analysis
+- **Lexemes Table** - View tokenized output with human-readable classifications
 - **File Path Display** - Shows currently loaded file
 - **Execute Button** - Run lexical analysis on the current code
+
+### Token Display Format
+The lexemes table displays tokens with descriptive classifications:
+- `HAI` → "Code Delimiter" (not "HAI")
+- `I HAS A` → "Variable Declaration" (not "I_HAS_A")
+- `VISIBLE` → "Output Keyword" (not "VISIBLE")
+- `12` → "Integer Literal" (not "NUMBR Literal")
 
 ### Placeholder Features (Coming Soon) 🔲
 - **Symbol Table** - Will display variable declarations and values
@@ -61,42 +68,43 @@ The graphical interface provides an integrated development environment for LOLCo
 
 ## File Descriptions
 
-### `lolcode_gui.py` (NEW)
+### `lolcode_gui.py`
 The main GUI application built with tkinter.
 
 **Key Components:**
 - **LOLCodeInterpreterGUI Class**: Main application class
   - `create_menu()` - Sets up File menu and keyboard shortcuts
   - `create_text_editor()` - Text editing area for LOLCode source
-  - `create_lexemes_table()` - Displays tokens in a tabular format
+  - `create_lexemes_table()` - Displays tokens in a tabular format with human-readable descriptions
   - `create_symbol_table()` - Placeholder for future symbol table implementation
   - `execute()` - Runs lexical analysis and updates the lexemes table
   - `open_file()` / `save_file()` / `save_file_as()` - File operations
 
 **GUI Layout:**
 ```
-┌─────────────────────────────────────────────────────┐
-│ File Menu                                           │
-├─────────────────────────────────────────────────────┤
-│ File Path: (None)                                   │
-├──────────────┬──────────────────┬───────────────────┤
-│              │    Lexemes       │  SYMBOL TABLE     │
-│              ├──────────────────┤                   │
-│              │ Lexeme | Class   │  Identifier|Value │
-│  Text Editor │ ─────────────────│  ──────────────── │
-│              │  HAI   | HAI     │  (placeholder)    │
-│              │  ...   | ...     │                   │
-│              │                  │                   │
-├──────────────┴──────────────────┴───────────────────┤
-│                  [ EXECUTE ]                        │
-├─────────────────────────────────────────────────────┤
-│ Console Output (placeholder)                        │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────┐
+│ File Menu                                         │
+├───────────────────────────────────────────────────┤
+│ File Path: (None)                                 │
+├───────────────┬──────────────────┬─────────────────┤
+│               │    Lexemes       │  SYMBOL TABLE   │
+│               ├──────────────────┤                 │
+│               │ Lexeme | Class   │  Identifier|Value│
+│  Text Editor  │ ──────────────── │  ─────────────── │
+│               │  HAI   | Code    │  (placeholder)  │
+│               │        | Delimiter│                 │
+│               │  ...   | ...     │                 │
+│               │                  │                 │
+├───────────────┴──────────────────┴─────────────────┤
+│                  [ EXECUTE ]                       │
+├───────────────────────────────────────────────────┤
+│ Console Output (placeholder)                       │
+│                                                    │
+└───────────────────────────────────────────────────┘
 ```
 
 ### `lexer/lol_tokens.py`
-Defines the token types and regular expression patterns for LOLCode lexemes.
+Defines the token types, regular expression patterns, and human-readable descriptions for LOLCode lexemes.
 
 **Key Components:**
 - **TokenType Enum**: Contains all token classifications including:
@@ -113,6 +121,11 @@ Defines the token types and regular expression patterns for LOLCode lexemes.
   - Identifiers: `VARIDENT`, `FUNCIDENT`, `LABEL`
   - Special: `LINEBREAK`, `COMMENT`, `UNKNOWN`
 
+- **TOKEN_DESCRIPTIONS**: Dictionary mapping TokenType enum values to human-readable descriptions for GUI display
+  - Example: `TokenType.HAI: "Code Delimiter"`
+  - Example: `TokenType.I_HAS_A: "Variable Declaration"`
+  - Example: `TokenType.VISIBLE: "Output Keyword"`
+  
 - **TOKEN_PATTERNS**: List of (regex_pattern, TokenType) tuples ordered by specificity
   - Multi-word keywords are matched first (e.g., `I HAS A`, `SUM OF`)
   - Single keywords follow
@@ -261,13 +274,15 @@ I IZ <funcname> [YR <arg1> [AN YR <arg2> ...]] MKAY
 
 5. **Line Tracking**: Each token records its line number for error reporting
 
+6. **Human-Readable Descriptions**: The `TOKEN_DESCRIPTIONS` dictionary maps internal token types to user-friendly names for GUI display, maintaining separation between internal representation and user interface.
+
 ### GUI Integration
 
 The GUI integrates with the lexer by:
 1. Adding the `lexer/` directory to Python's module search path
-2. Importing `tokenize_program()` function directly
+2. Importing `tokenize_program()` function and `TOKEN_DESCRIPTIONS` dictionary
 3. Passing editor content to the tokenizer
-4. Displaying results in a formatted table
+4. Displaying results in a formatted table with human-readable classifications
 5. Filtering out LINEBREAK tokens for cleaner display
 
 ## Testing
@@ -285,7 +300,7 @@ Test cases are organized in the `test_cases/` directory, covering:
 1. Launch `python lolcode_gui.py`
 2. Open a test file from `test_cases/`
 3. Click EXECUTE
-4. View tokens in the Lexemes table
+4. View tokens in the Lexemes table with descriptive classifications
 
 **To test with CLI:**
 ```bash
@@ -309,7 +324,7 @@ python lexer/lexer.py test_cases/01_variables.lol
 ### Phase 4: Complete GUI Implementation
 - ✅ File explorer for loading .lol files (DONE)
 - ✅ Text editor for code viewing/editing (DONE)
-- ✅ Token list display (DONE)
+- ✅ Token list display with human-readable descriptions (DONE)
 - ⬜ Symbol table display (parser required)
 - ⬜ Console for I/O (interpreter required)
 - ⬜ Execute/Run functionality (interpreter required)
@@ -332,6 +347,7 @@ When continuing work on this codebase:
 5. **Test incrementally** - Use the test cases to verify each feature
 6. **Maintain token structure** - (lexeme, TokenType, line_number) tuples throughout
 7. **Refer to specifications** - The project specs PDF contains authoritative language rules
+8. **Display layer separation** - `TokenType` enum values are for internal use; `TOKEN_DESCRIPTIONS` provides user-friendly names for the GUI
 
 ### Common Issues to Watch
 
@@ -340,6 +356,7 @@ When continuing work on this codebase:
 - Identifiers need contextual classification based on preceding tokens
 - Linebreak tokens are added but can be hidden in output
 - GUI imports require the lexer directory to be in Python's path
+- Token descriptions are purely for display - the internal TokenType enum remains unchanged
 
 ## Dependencies
 
