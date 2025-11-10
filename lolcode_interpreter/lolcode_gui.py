@@ -302,14 +302,52 @@ class LOLCodeInterpreterGUI:
                 self.text_editor.insert(1.0, content)
                 
                 self.current_file = filename
-                self.file_path_label.config(text=filename)
+                self.original_content = content  #track for unsaved changes
                 
-                # Clear previous tokens
+                #update UI
+                self.file_path_label.config(text=os.path.basename(filename))
+                self.file_path_label.config(fg='#333333')  #reset color
+
+                #clear analysis results
                 self.clear_lexemes_table()
+                self.clear_console()
                 
+                # Update console with success message
+                self.update_console(
+                    f"✓ Opened: {os.path.basename(filename)}\n"
+                    f"Lines: {content.count(chr(10)) + 1}\n"
+                    f"Characters: {len(content)}",
+                    'success'
+                )
+
+                #optional: Show file info in status bar
+                if hasattr(self, 'status_label'):
+                    self.status_label.config(text=f"Opened: {os.path.basename(filename)}")
+                
+                
+            except UnicodeDecodeError:
+                messagebox.showerror(
+                    "Encoding Error",
+                    "Failed to open file: Invalid text encoding.\n"
+                    "The file may be binary or use an unsupported encoding."
+                )
+            except PermissionError:
+                messagebox.showerror(
+                    "Permission Denied",
+                    f"Cannot open file:\n{filename}\n\n"
+                    "You don't have permission to read this file."
+                )
+            except FileNotFoundError:
+                messagebox.showerror(
+                    "File Not Found",
+                    f"The file no longer exists:\n{filename}"
+                )
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to open file:\n{str(e)}")
-    
+                messagebox.showerror(
+                    "Error",
+                    f"Failed to open file:\n{str(e)}"
+                )
+
     def save_file(self):
         if self.current_file:
             try:
