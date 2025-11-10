@@ -36,8 +36,6 @@ except ImportError as e:
     print("=========================================\n")
     sys.exit(1)
 
-
-
 class LOLCodeInterpreterGUI:
     def __init__(self, root):
         self.root = root
@@ -46,6 +44,7 @@ class LOLCodeInterpreterGUI:
         
         self.current_file = None
         self.tokens = []
+        self.original_content = ""  #track unsaved changes
         
         #create menu bar
         self.create_menu()
@@ -67,7 +66,7 @@ class LOLCodeInterpreterGUI:
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
         
-        # File menu
+        #file menu
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Open", command=self.open_file, accelerator="Ctrl+O")
@@ -76,7 +75,7 @@ class LOLCodeInterpreterGUI:
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         
-        # Bind keyboard shortcuts
+        #keyboard shortcuts
         self.root.bind('<Control-o>', lambda e: self.open_file())
         self.root.bind('<Control-s>', lambda e: self.save_file())
         self.root.bind('<Control-Shift-S>', lambda e: self.save_file_as())
@@ -98,7 +97,7 @@ class LOLCodeInterpreterGUI:
         self.file_path_label.pack(fill=tk.BOTH, expand=True)
     
     def create_middle_section(self, parent):
-        # Create PanedWindow for resizable columns
+        #create PanedWindow for resizable columns
         paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=4)
         paned.pack(fill=tk.BOTH, expand=True)
         
@@ -108,18 +107,18 @@ class LOLCodeInterpreterGUI:
         # Middle panel - Lexemes Table
         self.create_lexemes_table(paned)
         
-        # Right panel - Symbol Table (placeholder)
+        # Right panel - Symbol Table 
         self.create_symbol_table(paned)
     
     def create_text_editor(self, paned):
         editor_frame = tk.Frame(paned)
         paned.add(editor_frame, width=400)
         
-        # Add scrollbar
+        #add scrollbar
         scrollbar = tk.Scrollbar(editor_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Create text widget
+        #create text widget
         self.text_editor = tk.Text(
             editor_frame,
             wrap=tk.NONE,
@@ -137,22 +136,21 @@ class LOLCodeInterpreterGUI:
         self.add_line_numbers()
     
     def add_line_numbers(self):
-        # This is a simple implementation - can be enhanced
         pass
     
     def create_lexemes_table(self, paned):
         lexemes_frame = tk.Frame(paned)
         paned.add(lexemes_frame, width=400)
         
-        # Add label
+        #add label
         label = tk.Label(lexemes_frame, text="Lexemes", font=('Arial', 12, 'bold'), bg='#f0f0f0')
         label.pack(fill=tk.X, pady=(0, 5))
         
-        # Create treeview with scrollbar
+        #create treeview with scrollbar
         tree_frame = tk.Frame(lexemes_frame)
         tree_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Scrollbars
+        #scrollbars
         vsb = tk.Scrollbar(tree_frame, orient="vertical")
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
         
@@ -264,24 +262,26 @@ class LOLCodeInterpreterGUI:
         console_scroll.config(command=self.console_text.yview)
     
     def open_file(self):
-        #checker for unsaved changes
+        # FIX: Properly indent the unsaved changes check
+        # Checker for unsaved changes
         if self.has_unsaved_changes():
             response = messagebox.askyesnocancel(
                 "Unsaved Changes",
                 "Do you want to save changes before opening a new file?"
             )
-        if response is True:  
-            self.save_file()
-        elif response is None: 
-            return
+            if response is True:  
+                self.save_file()
+            elif response is None: 
+                return
         
         filename = filedialog.askopenfilename(
             title="Open LOLCode File",
-            filetypes=[("LOLCode Files", "*.lol"), 
-                       ("Text Files", "*.txt"), 
-                       ("All Files", "*.*"),
-                    ],
-                    initialdir=os.path.dirname(self.current_file) if self.current_file else os.getcwd()
+            filetypes=[
+                ("LOLCode Files", "*.lol"), 
+                ("Text Files", "*.txt"), 
+                ("All Files", "*.*"),
+            ],
+            initialdir=os.path.dirname(self.current_file) if self.current_file else os.getcwd()
         )
         
         if filename:
@@ -289,26 +289,27 @@ class LOLCodeInterpreterGUI:
                 with open(filename, 'r', encoding='utf-8') as f:
                     content = f.read()
 
-                #validate file is not empty
+                # FIX: Properly indent the empty file check
+                # Validate file is not empty
                 if not content.strip():
                     response = messagebox.askyesno(
                         "Empty File",
                         "The selected file is empty. Open anyway?"
                     )
-                if not response:
-                    return
+                    if not response:
+                        return
                 
                 self.text_editor.delete(1.0, tk.END)
                 self.text_editor.insert(1.0, content)
                 
                 self.current_file = filename
-                self.original_content = content  #track for unsaved changes
+                self.original_content = content  # Track for unsaved changes
                 
-                #update UI
+                # Update UI
                 self.file_path_label.config(text=os.path.basename(filename))
-                self.file_path_label.config(fg='#333333')  #reset color
+                self.file_path_label.config(fg='#333333')  # Reset color
 
-                #clear analysis results
+                # Clear analysis results
                 self.clear_lexemes_table()
                 self.clear_console()
                 
@@ -316,14 +317,12 @@ class LOLCodeInterpreterGUI:
                 self.update_console(
                     f"✓ Opened: {os.path.basename(filename)}\n"
                     f"Lines: {content.count(chr(10)) + 1}\n"
-                    f"Characters: {len(content)}",
-                    'success'
+                    f"Characters: {len(content)}"
                 )
 
-                #optional: Show file info in status bar
+                # Optional: Show file info in status bar
                 if hasattr(self, 'status_label'):
                     self.status_label.config(text=f"Opened: {os.path.basename(filename)}")
-                
                 
             except UnicodeDecodeError:
                 messagebox.showerror(
@@ -348,12 +347,28 @@ class LOLCodeInterpreterGUI:
                     f"Failed to open file:\n{str(e)}"
                 )
 
+    def has_unsaved_changes(self):
+        if not hasattr(self, 'original_content'):
+            self.original_content = ""
+    
+        current_content = self.text_editor.get(1.0, tk.END).rstrip('\n')
+        return current_content != self.original_content.rstrip('\n')
+
+    def clear_console(self):
+        self.console_text.config(state=tk.NORMAL)
+        self.console_text.delete(1.0, tk.END)
+        self.console_text.config(state=tk.DISABLED)
+
     def save_file(self):
         if self.current_file:
             try:
                 content = self.text_editor.get(1.0, tk.END)
                 with open(self.current_file, 'w', encoding='utf-8') as f:
                     f.write(content)
+                
+                # FIX: Update original_content after saving
+                self.original_content = content
+                
                 messagebox.showinfo("Success", "File saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save file:\n{str(e)}")
@@ -374,7 +389,9 @@ class LOLCodeInterpreterGUI:
                     f.write(content)
                 
                 self.current_file = filename
-                self.file_path_label.config(text=filename)
+                self.original_content = content  # FIX: Track content after save
+                self.file_path_label.config(text=os.path.basename(filename))
+                
                 messagebox.showinfo("Success", "File saved successfully!")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to save file:\n{str(e)}")
