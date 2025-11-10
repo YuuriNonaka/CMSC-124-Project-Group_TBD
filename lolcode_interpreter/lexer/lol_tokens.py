@@ -110,6 +110,108 @@ class TokenType(Enum):
     #unknown
     UNKNOWN = "Unknown"
 
+TOKEN_DESCRIPTIONS = {
+    TokenType.HAI: "Code Delimiter",
+    TokenType.KTHXBYE: "Code Delimiter",
+    TokenType.WAZZUP: "Variable Declaration Section Delimiter",
+    TokenType.BUHBYE: "Variable Declaration Section Delimiter",
+    
+    #variable operations
+    TokenType.I_HAS_A: "Variable Declaration",
+    TokenType.ITZ: "Variable Assignment",
+    TokenType.R: "Assignment Operator",
+    
+    #input/Output
+    TokenType.VISIBLE: "Output Keyword",
+    TokenType.GIMMEH: "Input Keyword",
+    
+    #arithmetic operators
+    TokenType.SUM_OF: "Addition Operator",
+    TokenType.DIFF_OF: "Subtraction Operator",
+    TokenType.PRODUKT_OF: "Multiplication Operator",
+    TokenType.QUOSHUNT_OF: "Division Operator",
+    TokenType.MOD_OF: "Modulo Operator",
+    TokenType.BIGGR_OF: "Maximum Operator",
+    TokenType.SMALLR_OF: "Minimum Operator",
+    
+    #boolean operators
+    TokenType.BOTH_OF: "AND Operator",
+    TokenType.EITHER_OF: "OR Operator",
+    TokenType.WON_OF: "XOR Operator",
+    TokenType.NOT: "NOT Operator",
+    TokenType.ALL_OF: "Infinite Arity AND",
+    TokenType.ANY_OF: "Infinite Arity OR",
+    
+    #comparison
+    TokenType.BOTH_SAEM: "Equality Operator",
+    TokenType.DIFFRINT: "Inequality Operator",
+    
+    #concatenation
+    TokenType.SMOOSH: "Concatenation Operator",
+    
+    #typecasting
+    TokenType.MAEK: "Typecast Operator",
+    TokenType.IS_NOW_A: "Type Assignment",
+    TokenType.A: "Typecast Delimiter",
+    
+    #conditionals
+    TokenType.O_RLY: "If-Then Delimiter",
+    TokenType.YA_RLY: "If Clause",
+    TokenType.MEBBE: "Else-If Clause",
+    TokenType.NO_WAI: "Else Clause",
+    TokenType.OIC: "Conditional Delimiter",
+    
+    #switch-case
+    TokenType.WTF: "Switch Delimiter",
+    TokenType.OMG: "Case Delimiter",
+    TokenType.OMGWTF: "Default Case",
+    
+    #loops
+    TokenType.IM_IN_YR: "Loop Start Delimiter",
+    TokenType.IM_OUTTA_YR: "Loop End Delimiter",
+    TokenType.UPPIN: "Increment Operator",
+    TokenType.NERFIN: "Decrement Operator",
+    TokenType.YR: "Parameter Delimiter",
+    TokenType.TIL: "Until Operator",
+    TokenType.WILE: "While Operator",
+    
+    #functions
+    TokenType.HOW_IZ_I: "Function Declaration",
+    TokenType.IF_U_SAY_SO: "Function Delimiter",
+    TokenType.I_IZ: "Function Call",
+    TokenType.FOUND_YR: "Return Keyword",
+    
+    #control
+    TokenType.GTFO: "Break Keyword",
+    
+    #separators
+    TokenType.AN: "Operand Separator",
+    TokenType.MKAY: "Expression Delimiter",
+    
+    #literals
+    TokenType.NUMBR: "Integer Literal",
+    TokenType.NUMBAR: "Float Literal",
+    TokenType.YARN: "String Literal",
+    TokenType.TROOF: "Boolean Literal",
+    TokenType.NOOB: "Null Literal",
+    
+    #type keywords
+    TokenType.TYPE_NUMBR: "Integer Type",
+    TokenType.TYPE_NUMBAR: "Float Type",
+    TokenType.TYPE_YARN: "String Type",
+    TokenType.TYPE_TROOF: "Boolean Type",
+    TokenType.TYPE_NOOB: "Null Type",
+    
+    #identifiers
+    TokenType.VARIDENT: "Variable Identifier",
+    TokenType.FUNCIDENT: "Function Identifier",
+    TokenType.LABEL: "Loop Label",
+    
+    #special
+    TokenType.LINEBREAK: "Line Break",
+    TokenType.COMMENT: "Comment",
+    TokenType.UNKNOWN: "Unknown Token",
+}
 
 #regex patterns for tokens (order matters - longest/most specific first)
 TOKEN_PATTERNS = [
@@ -186,7 +288,7 @@ TOKEN_PATTERNS = [
 
 
 def compile_patterns():
-    """compile all regex patterns for efficiency"""
+    #compile all regex patterns for efficiency
     return [(re.compile(pattern), token_type) for pattern, token_type in TOKEN_PATTERNS]
 
 
