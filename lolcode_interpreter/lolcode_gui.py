@@ -264,15 +264,39 @@ class LOLCodeInterpreterGUI:
         console_scroll.config(command=self.console_text.yview)
     
     def open_file(self):
+        #checker for unsaved changes
+        if self.has_unsaved_changes():
+            response = messagebox.askyesnocancel(
+                "Unsaved Changes",
+                "Do you want to save changes before opening a new file?"
+            )
+        if response is True:  
+            self.save_file()
+        elif response is None: 
+            return
+        
         filename = filedialog.askopenfilename(
             title="Open LOLCode File",
-            filetypes=[("LOLCode Files", "*.lol"), ("All Files", "*.*")]
+            filetypes=[("LOLCode Files", "*.lol"), 
+                       ("Text Files", "*.txt"), 
+                       ("All Files", "*.*"),
+                    ],
+                    initialdir=os.path.dirname(self.current_file) if self.current_file else os.getcwd()
         )
         
         if filename:
             try:
                 with open(filename, 'r', encoding='utf-8') as f:
                     content = f.read()
+
+                #validate file is not empty
+                if not content.strip():
+                    response = messagebox.askyesno(
+                        "Empty File",
+                        "The selected file is empty. Open anyway?"
+                    )
+                if not response:
+                    return
                 
                 self.text_editor.delete(1.0, tk.END)
                 self.text_editor.insert(1.0, content)
