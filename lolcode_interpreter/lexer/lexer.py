@@ -6,7 +6,6 @@ try:
 except ImportError:
     from lol_tokens import TokenType, COMPILED_PATTERNS
 
-
 def remove_comments(line):
     #find btw keyword (case insensitive, word boundary)
     btw_pattern = re.compile(r'\bBTW\b', re.IGNORECASE)
