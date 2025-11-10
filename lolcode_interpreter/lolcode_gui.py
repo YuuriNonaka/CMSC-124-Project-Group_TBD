@@ -11,6 +11,7 @@ if script_dir not in sys.path:
 try:
     from lexer import tokenize_program, TokenType
     from lexer.lol_tokens import TOKEN_DESCRIPTIONS
+    from symbolizer import symbolize
 
 except ImportError as e:
     print("\n========== IMPORT ERROR DEBUG ==========")
@@ -408,6 +409,10 @@ class LOLCodeInterpreterGUI:
             
             #update lexemes table
             self.update_lexemes_table()
+
+            symbol_table = symbolize(self.tokens)
+
+            self.update_symbol_table(symbol_table)
             
             #update console with success message
             self.update_console(f"Lexical analysis complete!\nTotal tokens: {len(self.tokens)}")
@@ -443,6 +448,21 @@ class LOLCodeInterpreterGUI:
         self.console_text.insert(1.0, message)
         self.console_text.config(state=tk.DISABLED)
 
+    def clear_symbol_table(self):
+        for item in self.symbol_tree.get_children():
+            self.symbol_tree.delete(item)
+
+    def update_symbol_table(self, symbol_table):
+        self.clear_symbol_table()
+
+        for idx, (identifier, value) in enumerate(symbol_table.items()):
+            tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
+            self.symbol_tree.insert(
+                '',
+                tk.END,
+                values = (identifier, value),
+                tags = (tag,)
+            )
 
 def main():
     root = tk.Tk()
