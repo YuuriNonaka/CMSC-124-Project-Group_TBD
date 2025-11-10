@@ -410,8 +410,10 @@ class LOLCodeInterpreterGUI:
             #update lexemes table
             self.update_lexemes_table()
 
+            # interpret variable values
             symbol_table = symbolize(self.tokens)
 
+            # update symbols table
             self.update_symbol_table(symbol_table)
             
             #update console with success message
@@ -453,8 +455,10 @@ class LOLCodeInterpreterGUI:
             self.symbol_tree.delete(item)
 
     def update_symbol_table(self, symbol_table):
+        # clear existing items
         self.clear_symbol_table()
 
+        #add tokens to the table
         for idx, (identifier, value) in enumerate(symbol_table.items()):
             tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
             self.symbol_tree.insert(

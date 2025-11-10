@@ -77,15 +77,17 @@ def tokenize_line(line, line_num, all_tokens_so_far=None):
 
         #string matching
         if in_string:
+
+            # finds the closing quote
             starting_position = pos
             while pos < len(line) and line[pos] != '"':
                 pos += 1
             
             lexeme = line[starting_position:pos]
-            if lexeme:
+            if lexeme: #if the lexeme is not empty, we append
                 tokens.append((lexeme, TokenType.YARN, line_num))
             
-            if pos < len(line) and line[pos] == '"':
+            if pos < len(line) and line[pos] == '"': #closing quote is found, add as string delim
                 tokens.append(('"', TokenType.STRING_DELIM, line_num))
                 in_string = False
 

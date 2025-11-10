@@ -1,16 +1,16 @@
 from lexer import TokenType
 
-def get_value(tokens, symbol_table):
+def get_value(tokens, symbol_table): #helper function: converts expression into a single string value ("noot noot" var => noot noot 12)
     values = []
     for lexeme, token_type, line_num in tokens:
         if token_type == TokenType.YARN or token_type == TokenType.NUMBR or token_type == TokenType.NUMBAR or token_type == TokenType.TROOF:
-            values.append(lexeme)
+            values.append(lexeme) #if simply a literal, just append.
         
         elif token_type == TokenType.VARIDENT:
-            values.append(str(symbol_table.get(lexeme, "")))
+            values.append(str(symbol_table.get(lexeme, ""))) #if a variable, find its value, turn into a string, and append.
         
         elif token_type == TokenType.STRING_DELIM:
-            pass
+            pass #delimiters are not included
     
     return " ".join(values)
 
@@ -24,14 +24,15 @@ def symbolize(tokens):
 
         # I HAS A <var> ITZ <value>
         if ((token_type == TokenType.I_HAS_A) and 
-            (i + 3 < len(tokens)) and 
-            (tokens[i + 1][1] == TokenType.VARIDENT) and 
-            (tokens[i + 2][1] == TokenType.ITZ)):
+            (i + 3 < len(tokens)) and # value exists after the ITZ
+            (tokens[i + 1][1] == TokenType.VARIDENT) and # checks the variable
+            (tokens[i + 2][1] == TokenType.ITZ)): # checks the assignment syntax ITZ
 
             var_name = tokens[i+1][0]
             
             value_tokens = []
             index = i + 3
+            # scan until linebreak
             while index < len(tokens) and tokens[index][1] != TokenType.LINEBREAK:
                 value_tokens.append(tokens[index])
                 index += 1
@@ -44,8 +45,8 @@ def symbolize(tokens):
 
         # I HAS A <var> 
         elif ((token_type == TokenType.I_HAS_A) and
-              (i + 1 < len(tokens)) and
-              (tokens[i + 1][1] == TokenType.VARIDENT)):
+              (i + 1 < len(tokens)) and # variable exists
+              (tokens[i + 1][1] == TokenType.VARIDENT)): # checks the variable
             
             var_name = tokens[i + 1][0]
             if var_name not in symbol_table:
