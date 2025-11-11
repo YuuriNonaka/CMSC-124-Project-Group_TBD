@@ -542,3 +542,8 @@ def parse_expression(self):
     raise SyntaxError(
         f"Invalid expression starting with '{self.current_token[0]}' on line {line_num}"
     )
+
+def parse_tokens(tokens): #function to simplify use in gui code
+    parser = Parser(tokens)
+    parser.parse()
+    return True
