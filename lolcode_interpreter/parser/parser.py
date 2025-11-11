@@ -364,7 +364,7 @@ class Parser: #uses recursive descent
         
         #parses additional parameters separated by AN YR
         while self.match(TokenType.AN):
-            self.advance()  # Move past AN
+            self.advance()  #moves past AN
             self.expect(TokenType.YR, "Expected YR after AN in parameter list")
             self.expect(TokenType.VARIDENT, "Expected parameter name after YR")
 
@@ -377,7 +377,7 @@ class Parser: #uses recursive descent
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"Expected function identifier after 'I IZ' on line {line_num}")
         
-        self.advance()  # Move past function name
+        self.advance()  #moves past function name
         
         #parses arguments if present (YR expr AN YR expr ...)
         if self.match(TokenType.YR):
@@ -389,15 +389,15 @@ class Parser: #uses recursive descent
     def parse_argument_list(self):
         #parses function arguments: YR expression [AN YR expression ...]
         self.expect(TokenType.YR)
-        self.parse_expression()  # Parse first argument expression
+        self.parse_expression()  #parses first argument expression
         
         #parses additional arguments separated by AN YR
         while self.match(TokenType.AN):
-            self.advance()  # Move past AN
+            self.advance()  #moves past AN
             self.expect(TokenType.YR, "Expected YR after AN in argument list")
-            self.parse_expression()  # Parse next argument expression
+            self.parse_expression()  #parses next argument expression
 
     def parse_return_statement(self):
         #parses return statement: FOUND YR expression
         self.expect(TokenType.FOUND_YR)
-        self.parse_expression()  # Parse the return value expression
+        self.parse_expression()  #parses the return value expression
