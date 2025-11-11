@@ -30,7 +30,7 @@ class Parser: #uses recursive descent
         return self.current_token
     
     def expect(self, token_type, error_msg=None):
-        #checks if current token matches expected type, then return it and move to next token
+        #checks if current token matches expected type, then return it andmoves to next token
         if not self.current_token:
             raise SyntaxError(f"Unexpected end of file. Expected {token_type.value}")
         
@@ -123,7 +123,7 @@ class Parser: #uses recursive descent
         
         #optional initialization with ITZ keyword
         if self.match(TokenType.ITZ):
-            self.advance()  # Move past ITZ
+            self.advance()  #moves past ITZ
             self.parse_expression()
 
     def parse_statement(self):
@@ -173,7 +173,7 @@ class Parser: #uses recursive descent
         
         #GTFO - break out of loop or switch
         elif token_type == TokenType.GTFO:
-            self.advance()  # Move past GTFO token
+            self.advance()  #moves past GTFO token
         
         #expression that evaluates to IT variable
         elif self.is_expression_start():
@@ -220,3 +220,117 @@ class Parser: #uses recursive descent
             self.advance()  #moves past R token
             self.parse_expression()
         #if no R token, this is just a variable reference (valid as standalone expression)
+
+    def parse_conditional(self):
+        #parses if/else conditional: O RLY? → YA RLY [MEBBE] [NO WAI] → OIC
+        self.expect(TokenType.O_RLY)
+        
+        #requires if block
+        self.expect(TokenType.YA_RLY, "O RLY? must be followed by YA RLY")
+        
+        #parses statements until MEBBE (else if), NO WAI (else), or OIC (end)
+        while self.current_token and not self.match(TokenType.MEBBE, TokenType.NO_WAI, TokenType.OIC):
+            self.parse_statement()
+        
+        #parse any else-if (MEBBE) blocks
+        while self.match(TokenType.MEBBE):
+            self.advance()  #moves MEBBE
+            self.parse_expression()  #parse the condition
+            
+            #parses else-if block statements until next MEBBE, NO WAI, or OIC
+            while self.current_token and not self.match(TokenType.MEBBE, TokenType.NO_WAI, TokenType.OIC):
+                self.parse_statement()
+        
+        #parses else (NO WAI) block if present
+        if self.match(TokenType.NO_WAI):
+            self.advance()  #moves past NO WAI
+            
+            #parses else block statements until OIC
+            while self.current_token and not self.match(TokenType.OIC):
+                self.parse_statement()
+        
+        #end of conditional
+        self.expect(TokenType.OIC, "Conditional must end with OIC")
+
+    def parse_switch(self):
+        #parses switch statement: WTF? → OMG cases [OMGWTF default] → OIC
+        self.expect(TokenType.WTF)
+        
+        #must have at least one case
+        if not self.match(TokenType.OMG):
+            line_num = self.current_token[2] if self.current_token else "EOF"
+            raise SyntaxError(f"WTF? must be followed by at least one OMG case on line {line_num}")
+        
+        #parse all cases
+        while self.match(TokenType.OMG):
+            self.advance()  #moves past OMG
+            
+            #case value must be a literal (number, string, boolean, or null)
+            if not self.match(TokenType.NUMBR, TokenType.NUMBAR, TokenType.YARN, TokenType.TROOF, TokenType.NOOB):
+                line_num = self.current_token[2] if self.current_token else "EOF"
+                raise SyntaxError(f"OMG must be followed by a literal value on line {line_num}")
+            
+            self.advance()  #moves past the literal value
+            
+            #parses case body statements until next OMG, OMGWTF, or OIC
+            while self.current_token and not self.match(TokenType.OMG, TokenType.OMGWTF, TokenType.OIC):
+                self.parse_statement()
+        
+        #parses default case (OMGWTF) if present
+        if self.match(TokenType.OMGWTF):
+            self.advance()  #moves past OMGWTF
+            
+            #parses default case statements until OIC
+            while self.current_token and not self.match(TokenType.OIC):
+                self.parse_statement()
+        
+        #end of switch statement
+        self.expect(TokenType.OIC, "Switch statement must end with OIC")
+
+    def parse_loop(self):
+        #parses loop: IM IN YR label → UPPIN/NERFIN → YR variable → [TIL/WILE condition] → body → IM OUTTA YR label
+        self.expect(TokenType.IM_IN_YR)
+        
+        #gets loop label name
+        if not self.match(TokenType.LABEL):
+            line_num = self.current_token[2] if self.current_token else "EOF"
+            raise SyntaxError(f"Expected loop label after 'IM IN YR' on line {line_num}")
+        
+        label_name = self.current_token[0]
+        self.advance()  #moves past label
+        
+        #loop must specify increment type (UPPIN = increment, NERFIN = decrement)
+        if not self.match(TokenType.UPPIN, TokenType.NERFIN):
+            line_num = self.current_token[2] if self.current_token else "EOF"
+            raise SyntaxError(f"Expected UPPIN or NERFIN after loop label on line {line_num}")
+        
+        self.advance()  #moves past UPPIN/NERFIN
+        
+        #expects YR keyword before loop variable
+        self.expect(TokenType.YR, "Expected YR after UPPIN/NERFIN")
+        
+        #gets the loop variable to increment/decrement
+        self.expect(TokenType.VARIDENT, "Expected variable identifier after YR")
+        
+        #optional loop condition (TIL = until, WILE = while)
+        if self.match(TokenType.TIL, TokenType.WILE):
+            self.advance()  #moves past TIL/WILE
+            self.parse_expression()  # Parse the loop condition
+        
+        #parses loop body statements until IM OUTTA YR
+        while self.current_token and not self.match(TokenType.IM_OUTTA_YR):
+            self.parse_statement()
+        
+        #verifies loop ends with matching label
+        self.expect(TokenType.IM_OUTTA_YR, "Loop must end with IM OUTTA YR")
+        
+        if not self.match(TokenType.LABEL):
+            line_num = self.current_token[2] if self.current_token else "EOF"
+            raise SyntaxError(f"Expected loop label after 'IM OUTTA YR' on line {line_num}")
+        
+        end_label = self.current_token[0]
+        if end_label != label_name: #checks if loop name at start and end are the same
+            line_num = self.current_token[2]
+            raise SyntaxError(f"Loop label mismatch: started with '{label_name}' but ended with '{end_label}' on line {line_num}")
+        
+        self.advance()  #moves past end label
