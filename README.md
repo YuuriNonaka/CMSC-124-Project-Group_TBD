@@ -6,9 +6,9 @@ A comprehensive interpreter for the LOLCode esoteric programming language, devel
 
 This interpreter implements lexical, syntactical, and semantic analysis for LOLCode programs (.lol files). The project follows the specifications outlined in the CMSC 124 project requirements and aims to create a fully functional interpreter with a graphical user interface.
 
-### Current Status: **Lexical Analysis Complete + GUI Implemented** ✔
+### Current Status: **Lexical Analysis Complete + Semantic Analysis In Progress** ✔
 
-The lexer is fully implemented and can tokenize LOLCode programs according to the language specifications. A graphical user interface has been added for easier interaction with the interpreter.
+The lexer is fully implemented and can tokenize LOLCode programs according to the language specifications. A graphical user interface has been added for easier interaction with the interpreter. Symbol table construction and basic semantic analysis features are now being developed.
 
 ## Project Structure
 
@@ -18,6 +18,12 @@ lolcode_interpreter/
 │   ├── __init__.py        # Package initializer - exports tokenize_program and TokenType
 │   ├── lexer.py           # Main lexical analyzer
 │   └── lol_tokens.py      # Token definitions, patterns, and human-readable descriptions
+├── parser/
+│   ├── __init__.py        # Package initializer (to be implemented)
+│   └── parser.py          # Syntax analyzer (placeholder - not yet implemented)
+├── semantics/
+│   ├── __init__.py        # Package initializer - exports symbolize and get_value
+│   └── symbolizer.py      # Symbol table construction and management
 ├── test_cases/
 │   ├── 01_variables.lol   # Test: Variable declarations
 │   ├── 02_gimmeh.lol      # Test: User input
@@ -47,8 +53,9 @@ The graphical interface provides an integrated development environment for LOLCo
 - **Text Editor Panel** - Edit LOLCode source code with syntax support
 - **File Operations** - Open, Save, and Save As functionality with keyboard shortcuts
 - **Lexemes Table** - View tokenized output with human-readable classifications
+- **Symbol Table Display** - Shows variable declarations and their current values
 - **File Path Display** - Shows currently loaded file
-- **Execute Button** - Run lexical analysis on the current code
+- **Execute Button** - Run lexical and semantic analysis on the current code
 
 ### Token Display Format
 The lexemes table displays tokens with descriptive classifications:
@@ -58,7 +65,6 @@ The lexemes table displays tokens with descriptive classifications:
 - `12` → "Integer Literal" (not "NUMBR Literal")
 
 ### Placeholder Features (Coming Soon) 🔲
-- **Symbol Table** - Will display variable declarations and values
 - **Console Output** - Will show program execution results and I/O
 
 ### Keyboard Shortcuts
@@ -76,32 +82,72 @@ The main GUI application built with tkinter.
   - `create_menu()` - Sets up File menu and keyboard shortcuts
   - `create_text_editor()` - Text editing area for LOLCode source
   - `create_lexemes_table()` - Displays tokens in a tabular format with human-readable descriptions
-  - `create_symbol_table()` - Placeholder for future symbol table implementation
-  - `execute()` - Runs lexical analysis and updates the lexemes table
+  - `create_symbol_table()` - Displays variable names and their values from semantic analysis
+  - `execute()` - Runs lexical and semantic analysis, updates both lexemes and symbol tables
   - `open_file()` / `save_file()` / `save_file_as()` - File operations
 
 **GUI Layout:**
 ```
-┌───────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │ File Menu                                         │
-├───────────────────────────────────────────────────┤
+├──────────────────────────────────────────────────┤
 │ File Path: (None)                                 │
-├───────────────┬──────────────────┬─────────────────┤
+├────────────────┬──────────────────┬───────────────┤
 │               │    Lexemes       │  SYMBOL TABLE   │
 │               ├──────────────────┤                 │
 │               │ Lexeme | Class   │  Identifier|Value│
 │  Text Editor  │ ──────────────── │  ─────────────── │
-│               │  HAI   | Code    │  (placeholder)  │
-│               │        | Delimiter│                 │
-│               │  ...   | ...     │                 │
+│               │  HAI   | Code    │  IT        |     │
+│               │        | Delimiter│  x         | 5   │
+│               │  ...   | ...     │  ...       | ... │
 │               │                  │                 │
 ├───────────────┴──────────────────┴─────────────────┤
 │                  [ EXECUTE ]                       │
-├───────────────────────────────────────────────────┤
+├──────────────────────────────────────────────────┤
 │ Console Output (placeholder)                       │
 │                                                    │
-└───────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────┘
 ```
+
+### `semantics/symbolizer.py`
+Implements symbol table construction and management for semantic analysis.
+
+**Key Components:**
+- **Symbol Table Structure**: Dictionary mapping variable names to their values
+  - Tracks all declared variables
+  - Special variable `IT` stores implicit expression results
+  - Values stored as strings for display purposes
+
+**Key Functions:**
+
+1. **`get_value(tokens, symbol_table)`**
+   - Helper function that converts token sequences into string values
+   - Resolves variable references to their stored values
+   - Handles literals (YARN, NUMBR, NUMBAR, TROOF) directly
+   - Filters out string delimiters
+   - Returns space-joined string representation
+
+2. **`symbolize(tokens)`**
+   - Main entry point for symbol table construction
+   - Processes token stream to build symbol table
+   - Initializes with implicit `IT` variable
+   - Handles variable declarations and assignments:
+     - `I HAS A <var> ITZ <value>` - Declaration with initialization
+     - `I HAS A <var>` - Declaration without initialization (empty string)
+     - `VISIBLE <expression>` - Updates IT variable with output value
+   - Returns complete symbol table dictionary
+
+**Current Capabilities:**
+- Variable declaration tracking
+- Variable initialization with values
+- Expression value extraction
+- VISIBLE statement tracking (stores in IT)
+
+**Future Enhancements:**
+- Assignment statements (`<var> R <value>`)
+- Type inference and validation
+- Scope management
+- Expression evaluation
 
 ### `lexer/lol_tokens.py`
 Defines the token types, regular expression patterns, and human-readable descriptions for LOLCode lexemes.
@@ -276,14 +322,40 @@ I IZ <funcname> [YR <arg1> [AN YR <arg2> ...]] MKAY
 
 6. **Human-Readable Descriptions**: The `TOKEN_DESCRIPTIONS` dictionary maps internal token types to user-friendly names for GUI display, maintaining separation between internal representation and user interface.
 
+### Semantic Analysis Details
+
+1. **Symbol Table Structure**: Uses a Python dictionary for variable storage
+   - Key: variable name (string)
+   - Value: variable value (string representation)
+   - Special entry: `IT` for implicit results
+
+2. **Variable Tracking**: 
+   - Declarations are tracked immediately upon encountering `I HAS A`
+   - Uninitialized variables default to empty string
+   - Initialized variables store their converted value
+
+3. **Value Resolution**: 
+   - Literals are used directly
+   - Variable references are resolved from the symbol table
+   - String delimiters are filtered out during processing
+
+4. **Current Limitations**:
+   - No type checking or inference yet
+   - Assignment statements (`R`) not yet implemented
+   - No scope management (global scope only)
+   - Expression evaluation is basic (string concatenation)
+
 ### GUI Integration
 
-The GUI integrates with the lexer by:
-1. Adding the `lexer/` directory to Python's module search path
-2. Importing `tokenize_program()` function and `TOKEN_DESCRIPTIONS` dictionary
-3. Passing editor content to the tokenizer
-4. Displaying results in a formatted table with human-readable classifications
-5. Filtering out LINEBREAK tokens for cleaner display
+The GUI integrates with the lexer and semantic analyzer by:
+1. Adding the project root to Python's module search path
+2. Importing `tokenize_program()` from lexer package
+3. Importing `symbolize()` from semantics package
+4. Importing `TOKEN_DESCRIPTIONS` for human-readable token names
+5. Passing editor content to the tokenizer
+6. Processing tokens through the symbolizer
+7. Displaying results in formatted tables
+8. Filtering out LINEBREAK tokens for cleaner display
 
 ## Testing
 
@@ -307,25 +379,44 @@ Test cases are organized in the `test_cases/` directory, covering:
 python lexer/lexer.py test_cases/01_variables.lol
 ```
 
+**To test symbol table (Python):**
+```python
+from lexer import tokenize_program
+from semantics import symbolize
+
+code = """HAI
+I HAS A x ITZ 5
+VISIBLE x
+KTHXBYE"""
+
+tokens = tokenize_program(code)
+symbol_table = symbolize(tokens)
+print(symbol_table)  # {'IT': '5', 'x': '5'}
+```
+
 ## Next Steps
 
-### Phase 2: Syntax Analysis (Parser) - IN PROGRESS
+### Phase 2: Syntax Analysis (Parser) - PLANNED
+- Create parser module structure (folder created)
 - Implement grammar rules for LOLCode
 - Build Abstract Syntax Tree (AST)
 - Validate program structure
 - Integrate with GUI
 
-### Phase 3: Semantic Analysis
-- Type checking and inference
-- Variable scope management
-- Expression evaluation
-- Runtime error detection
+### Phase 3: Semantic Analysis - IN PROGRESS
+- ✅ Symbol table construction
+- ✅ Variable declaration tracking
+- ⬜ Assignment statement handling (`<var> R <value>`)
+- ⬜ Type checking and inference
+- ⬜ Variable scope management
+- ⬜ Expression evaluation
+- ⬜ Runtime error detection
 
 ### Phase 4: Complete GUI Implementation
 - ✅ File explorer for loading .lol files (DONE)
 - ✅ Text editor for code viewing/editing (DONE)
 - ✅ Token list display with human-readable descriptions (DONE)
-- ⬜ Symbol table display (parser required)
+- ✅ Symbol table display (DONE)
 - ⬜ Console for I/O (interpreter required)
 - ⬜ Execute/Run functionality (interpreter required)
 
@@ -340,14 +431,16 @@ python lexer/lexer.py test_cases/01_variables.lol
 
 When continuing work on this codebase:
 
-1. **Lexer is complete** - Focus on parser/semantic analysis next
-2. **GUI framework ready** - Add parser and interpreter integration
-3. **Follow the pattern ordering** in `lol_tokens.py` - order matters!
-4. **Context is key** - The `classify_identifier` function shows how to use previous tokens for disambiguation
-5. **Test incrementally** - Use the test cases to verify each feature
-6. **Maintain token structure** - (lexeme, TokenType, line_number) tuples throughout
-7. **Refer to specifications** - The project specs PDF contains authoritative language rules
-8. **Display layer separation** - `TokenType` enum values are for internal use; `TOKEN_DESCRIPTIONS` provides user-friendly names for the GUI
+1. **Lexer is complete** ✅ - Focus on parser/semantic analysis next
+2. **Semantic module started** 🔄 - Symbol table construction implemented
+3. **GUI framework ready** - Add parser and interpreter integration
+4. **Follow the pattern ordering** in `lol_tokens.py` - order matters!
+5. **Context is key** - The `classify_identifier` function shows how to use previous tokens for disambiguation
+6. **Test incrementally** - Use the test cases to verify each feature
+7. **Maintain token structure** - (lexeme, TokenType, line_number) tuples throughout
+8. **Refer to specifications** - The project specs PDF contains authoritative language rules
+9. **Display layer separation** - `TokenType` enum values are for internal use; `TOKEN_DESCRIPTIONS` provides user-friendly names for the GUI
+10. **Module organization** - Keep lexer, parser (future), and semantics in separate packages
 
 ### Common Issues to Watch
 
@@ -355,8 +448,9 @@ When continuing work on this codebase:
 - NOOB appears in both literals and type keywords - pattern order handles this
 - Identifiers need contextual classification based on preceding tokens
 - Linebreak tokens are added but can be hidden in output
-- GUI imports require the lexer directory to be in Python's path
+- GUI imports require the project root to be in Python's path
 - Token descriptions are purely for display - the internal TokenType enum remains unchanged
+- Import paths should be relative to project root (e.g., `from semantics import symbolize`)
 
 ## Dependencies
 
