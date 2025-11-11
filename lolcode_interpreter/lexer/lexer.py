@@ -55,6 +55,13 @@ def tokenize_line(line, line_num, all_tokens_so_far=None):
     if not line:
         return tokens
     
+    # checks if currently in a string
+    in_string = False
+    if all_tokens_so_far and all_tokens_so_far[-1][1] == TokenType.STRING_DELIM:
+        delim_count = sum(1 for t in all_tokens_so_far if t[1] == TokenType.STRING_DELIM)
+        if delim_count % 2 != 0: # if only one " is detected
+            in_string = True
+    
     #remove inline comments first
     line = remove_comments(line)
     
@@ -67,6 +74,25 @@ def tokenize_line(line, line_num, all_tokens_so_far=None):
         if line[pos].isspace():
             pos += 1
             continue
+
+        #string matching
+        if in_string:
+
+            # finds the closing quote
+            starting_position = pos
+            while pos < len(line) and line[pos] != '"':
+                pos += 1
+            
+            lexeme = line[starting_position:pos]
+            if lexeme: #if the lexeme is not empty, we append
+                tokens.append((lexeme, TokenType.YARN, line_num))
+            
+            if pos < len(line) and line[pos] == '"': #closing quote is found, add as string delim
+                tokens.append(('"', TokenType.STRING_DELIM, line_num))
+                in_string = False
+
+            pos += 1
+            continue
         
         #try matching with our patterns
         matched = False
@@ -74,6 +100,9 @@ def tokenize_line(line, line_num, all_tokens_so_far=None):
             match = pattern.match(line, pos)
             if match:
                 lexeme = match.group(0)
+
+                if token_type == TokenType.STRING_DELIM:
+                    in_string = True
 
                 #if regular identifier then figure out what kind it is
                 if token_type == TokenType.VARIDENT:

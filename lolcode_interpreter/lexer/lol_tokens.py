@@ -103,6 +103,9 @@ class TokenType(Enum):
 
     #special tokens
     LINEBREAK = "Line Break"
+
+    #strings
+    STRING_DELIM = "String Delimiter"
     
     #comments (for tracking, but ignored in output)
     COMMENT = "Comment"
@@ -211,6 +214,9 @@ TOKEN_DESCRIPTIONS = {
     TokenType.LINEBREAK: "Line Break",
     TokenType.COMMENT: "Comment",
     TokenType.UNKNOWN: "Unknown Token",
+
+    #strings
+    TokenType.STRING_DELIM: "String Delimiter",
 }
 
 #regex patterns for tokens (order matters - longest/most specific first)
@@ -271,9 +277,12 @@ TOKEN_PATTERNS = [
     #literals (before type keywords)
     (r'-?\d+\.\d+', TokenType.NUMBAR),  #float
     (r'-?\d+', TokenType.NUMBR),  #integer
-    (r'"[^"]*"', TokenType.YARN),  #string
+    # (r'"[^"]*"', TokenType.YARN),  #string
     (r'\b(WIN|FAIL)\b', TokenType.TROOF),  #boolean
     (r'\bNOOB\b', TokenType.NOOB),  #noob literal and type keyword
+
+    #string delimiter
+    (r'"', TokenType.STRING_DELIM),
     
     #type keywords (after noob literal)
     (r'\bNUMBR\b', TokenType.TYPE_NUMBR),
