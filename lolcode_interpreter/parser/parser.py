@@ -198,11 +198,11 @@ class Parser: #uses recursive descent
         self.parse_expression()
         
         #parses additional expressions on the same line (space-separated)
-        while self.current_token and self.is_expression_start() and self.current_token[1] != TokenType.NEWLINE:
+        while self.current_token and self.is_expression_start() and self.current_token[1] != TokenType.LINEBREAK:
             self.parse_expression()
         
-        #consumes the newline at the end of the statement if present
-        if self.current_token and self.current_token[1] == TokenType.NEWLINE:
+        #consumes the line break at the end of the statement if present
+        if self.current_token and self.current_token[1] == TokenType.LINEBREAK:
             self.advance()
 
     def parse_gimmeh_statement(self):
