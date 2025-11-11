@@ -334,3 +334,70 @@ class Parser: #uses recursive descent
             raise SyntaxError(f"Loop label mismatch: started with '{label_name}' but ended with '{end_label}' on line {line_num}")
         
         self.advance()  #moves past end label
+
+    def parse_function_definition(self):
+        #parses function definition: HOW IZ I function_name [YR parameters] → statements → IF U SAY SO
+        self.expect(TokenType.HOW_IZ_I)
+        
+        #gets function name
+        if not self.match(TokenType.FUNCIDENT):
+            line_num = self.current_token[2] if self.current_token else "EOF"
+            raise SyntaxError(f"Expected function identifier after 'HOW IZ I' on line {line_num}")
+        
+        self.advance()  #moves past function name
+        
+        #parses parameters if present (YR param1 AN YR param2 ...)
+        if self.match(TokenType.YR):
+            self.parse_parameter_list()
+        
+        #parses function body statements until IF U SAY SO
+        while self.current_token and not self.match(TokenType.IF_U_SAY_SO):
+            self.parse_statement()
+        
+        #ends function definition
+        self.expect(TokenType.IF_U_SAY_SO, "Function must end with IF U SAY SO")
+
+    def parse_parameter_list(self):
+        #parses function parameters: YR param_name [AN YR param_name ...]
+        self.expect(TokenType.YR)
+        self.expect(TokenType.VARIDENT, "Expected parameter name after YR")
+        
+        #parses additional parameters separated by AN YR
+        while self.match(TokenType.AN):
+            self.advance()  # Move past AN
+            self.expect(TokenType.YR, "Expected YR after AN in parameter list")
+            self.expect(TokenType.VARIDENT, "Expected parameter name after YR")
+
+    def parse_function_call(self):
+        #parses function call: I IZ function_name [YR arguments] MKAY
+        self.expect(TokenType.I_IZ)
+        
+        #gets function name to call
+        if not self.match(TokenType.FUNCIDENT):
+            line_num = self.current_token[2] if self.current_token else "EOF"
+            raise SyntaxError(f"Expected function identifier after 'I IZ' on line {line_num}")
+        
+        self.advance()  # Move past function name
+        
+        #parses arguments if present (YR expr AN YR expr ...)
+        if self.match(TokenType.YR):
+            self.parse_argument_list()
+        
+        #ends function call
+        self.expect(TokenType.MKAY, "Function call must end with MKAY")
+
+    def parse_argument_list(self):
+        #parses function arguments: YR expression [AN YR expression ...]
+        self.expect(TokenType.YR)
+        self.parse_expression()  # Parse first argument expression
+        
+        #parses additional arguments separated by AN YR
+        while self.match(TokenType.AN):
+            self.advance()  # Move past AN
+            self.expect(TokenType.YR, "Expected YR after AN in argument list")
+            self.parse_expression()  # Parse next argument expression
+
+    def parse_return_statement(self):
+        #parses return statement: FOUND YR expression
+        self.expect(TokenType.FOUND_YR)
+        self.parse_expression()  # Parse the return value expression
