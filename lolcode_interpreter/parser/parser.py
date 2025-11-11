@@ -125,4 +125,98 @@ class Parser: #uses recursive descent
         if self.match(TokenType.ITZ):
             self.advance()  # Move past ITZ
             self.parse_expression()
-    
+
+    def parse_statement(self):
+        #parses one statement: output, input, assignment, conditionals, loops, functions, etc.
+        #has separate functions for each type
+        if not self.current_token:
+            return
+        
+        token_type = self.current_token[1]
+        line_num = self.current_token[2]
+        
+        #VISIBLE - output statement
+        if token_type == TokenType.VISIBLE:
+            self.parse_visible_statement()
+        
+        #GIMMEH - input statement  
+        elif token_type == TokenType.GIMMEH:
+            self.parse_gimmeh_statement()
+        
+        #Assignment: <variable> R <expression>
+        elif token_type == TokenType.VARIDENT:
+            self.parse_assignment_or_expression()
+        
+        #O RLY? - if/else conditional
+        elif token_type == TokenType.O_RLY:
+            self.parse_conditional()
+        
+        #WTF? - switch/case statement
+        elif token_type == TokenType.WTF:
+            self.parse_switch()
+        
+        #IM IN YR - loop construct
+        elif token_type == TokenType.IM_IN_YR:
+            self.parse_loop()
+        
+        #HOW IZ I - function definition
+        elif token_type == TokenType.HOW_IZ_I:
+            self.parse_function_definition()
+        
+        #I IZ - function call
+        elif token_type == TokenType.I_IZ:
+            self.parse_function_call()
+        
+        #FOUND YR - return from function
+        elif token_type == TokenType.FOUND_YR:
+            self.parse_return_statement()
+        
+        #GTFO - break out of loop or switch
+        elif token_type == TokenType.GTFO:
+            self.advance()  # Move past GTFO token
+        
+        #expression that evaluates to IT variable
+        elif self.is_expression_start():
+            self.parse_expression()
+        
+        else:
+            raise SyntaxError(
+                f"Unexpected statement starting with '{self.current_token[0]}' "
+                f"on line {line_num}"
+            )
+
+    def parse_visible_statement(self):
+        #parses VISIBLE statement: output one or more expressions separated by spaces
+        self.expect(TokenType.VISIBLE)
+        
+        #requires at least one expression
+        if not self.is_expression_start():
+            line_num = self.current_token[2] if self.current_token else "EOF"
+            raise SyntaxError(f"VISIBLE requires at least one expression on line {line_num}")
+        
+        #parses first expression
+        self.parse_expression()
+        
+        #parses additional expressions on the same line (space-separated)
+        while self.current_token and self.is_expression_start() and self.current_token[1] != TokenType.NEWLINE:
+            self.parse_expression()
+        
+        #consumes the newline at the end of the statement if present
+        if self.current_token and self.current_token[1] == TokenType.NEWLINE:
+            self.advance()
+
+    def parse_gimmeh_statement(self):
+        #parses GIMMEH statement: read input into a variable
+        self.expect(TokenType.GIMMEH)
+        self.expect(TokenType.VARIDENT, "GIMMEH requires a variable identifier")
+
+    def parse_assignment_or_expression(self):
+        #parses either variable assignment (<var> R <expr>) or variable reference as expression
+        var_token = self.current_token
+        self.advance()  #moves past variable name
+        
+        if self.match(TokenType.R):
+            #this is an assignment: variable R expression
+            self.advance()  #moves past R token
+            self.parse_expression()
+        #if no R token, this is just a variable reference (valid as standalone expression)
