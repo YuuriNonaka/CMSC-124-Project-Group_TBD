@@ -12,6 +12,7 @@ try:
     from lexer import tokenize_program, TokenType
     from lexer.lol_tokens import TOKEN_DESCRIPTIONS
     from semantics import symbolize
+    from parser import Parser, SyntaxError as LOLSyntaxError
 
 except ImportError as e:
     print("\n========== IMPORT ERROR DEBUG ==========")
@@ -314,7 +315,7 @@ class LOLCodeInterpreterGUI:
                 
                 #update console with success message
                 self.update_console(
-                    f"✓ Opened: {os.path.basename(filename)}\n"
+                    f"Opened: {os.path.basename(filename)}\n"
                     f"Lines: {content.count(chr(10)) + 1}\n"
                     f"Characters: {len(content)}"
                 )
@@ -396,7 +397,8 @@ class LOLCodeInterpreterGUI:
                 messagebox.showerror("Error", f"Failed to save file:\n{str(e)}")
     
     def execute(self):
-        #get the code from text editor
+        """Execute lexical, syntax, and semantic analysis."""
+        # Get the code from text editor
         source_code = self.text_editor.get(1.0, tk.END)
         
         if not source_code.strip():
@@ -404,23 +406,32 @@ class LOLCodeInterpreterGUI:
             return
         
         try:
-            #tokenize the program
+            #lexical analysis
             self.tokens = tokenize_program(source_code)
-            
-            #update lexemes table
             self.update_lexemes_table()
-
-            # interpret variable values
+            
+            #syntax analysis
+            parser = Parser(self.tokens)
+            parser.parse()  #raises LOLSyntaxError if invalid
+            
+            #semantic analysis
             symbol_table = symbolize(self.tokens)
-
-            # update symbols table
             self.update_symbol_table(symbol_table)
             
-            #update console with success message
-            self.update_console(f"Lexical analysis complete!\nTotal tokens: {len(self.tokens)}")
+            #success message
+            self.update_console(
+                f"Syntax check passed!\n"
+                f"Total tokens: {len(self.tokens)}\n"
+                f"Variables declared: {len(symbol_table)}"
+            )
+            
+        except LOLSyntaxError as e:
+            #syntax error - prints in console
+            self.update_console(f"SYNTAX ERROR:\n{str(e)}")
             
         except Exception as e:
-            messagebox.showerror("Error", f"Lexical analysis failed:\n{str(e)}")
+            #other errors
+            messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
             self.update_console(f"ERROR: {str(e)}")
     
     def clear_lexemes_table(self):
