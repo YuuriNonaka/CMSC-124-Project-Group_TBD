@@ -11,7 +11,7 @@ if script_dir not in sys.path:
 try:
     from lexer import tokenize_program, TokenType
     from lexer.lol_tokens import TOKEN_DESCRIPTIONS
-    from symbolizer import symbolize
+    from semantics import symbolize
 
 except ImportError as e:
     print("\n========== IMPORT ERROR DEBUG ==========")
