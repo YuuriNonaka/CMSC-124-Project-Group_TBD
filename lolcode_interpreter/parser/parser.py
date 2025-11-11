@@ -198,11 +198,11 @@ class Parser: #uses recursive descent
         self.parse_expression()
         
         #parses additional expressions on the same line (space-separated)
-        while self.current_token and self.is_expression_start() and self.current_token[1] != TokenType.NEWLINE:
+        while self.current_token and self.is_expression_start() and self.current_token[1] != TokenType.LINEBREAK:
             self.parse_expression()
         
-        #consumes the newline at the end of the statement if present
-        if self.current_token and self.current_token[1] == TokenType.NEWLINE:
+        #consumes the line break at the end of the statement if present
+        if self.current_token and self.current_token[1] == TokenType.LINEBREAK:
             self.advance()
 
     def parse_gimmeh_statement(self):
@@ -402,146 +402,146 @@ class Parser: #uses recursive descent
         self.expect(TokenType.FOUND_YR)
         self.parse_expression()  #parses the return value expression
 
-def is_expression_start(self):
-    #checks if current token can begin an expression (literals, variables, operators, etc.)
-    if not self.current_token:
-        return False
-    
-    return self.match(
-        #literal values
-        TokenType.NUMBR, TokenType.NUMBAR, TokenType.YARN,
-        TokenType.TROOF, TokenType.NOOB,
-        #variable references
-        TokenType.VARIDENT,
-        #math operators
-        TokenType.SUM_OF, TokenType.DIFF_OF, TokenType.PRODUKT_OF,
-        TokenType.QUOSHUNT_OF, TokenType.MOD_OF,
-        TokenType.BIGGR_OF, TokenType.SMALLR_OF,
-        #boolean operators
-        TokenType.BOTH_OF, TokenType.EITHER_OF, TokenType.WON_OF,
-        TokenType.NOT, TokenType.ALL_OF, TokenType.ANY_OF,
-        #comparison operators
-        TokenType.BOTH_SAEM, TokenType.DIFFRINT,
-        #string concatenation
-        TokenType.SMOOSH,
-        #type casting
-        TokenType.MAEK,
-        #function calls
-        TokenType.I_IZ,
-        #string delimiters
-        TokenType.STRING_DELIM
-    )
+    def is_expression_start(self):
+        #checks if current token can begin an expression (literals, variables, operators, etc.)
+        if not self.current_token:
+            return False
+        
+        return self.match(
+            #literal values
+            TokenType.NUMBR, TokenType.NUMBAR, TokenType.YARN,
+            TokenType.TROOF, TokenType.NOOB,
+            #variable references
+            TokenType.VARIDENT,
+            #math operators
+            TokenType.SUM_OF, TokenType.DIFF_OF, TokenType.PRODUKT_OF,
+            TokenType.QUOSHUNT_OF, TokenType.MOD_OF,
+            TokenType.BIGGR_OF, TokenType.SMALLR_OF,
+            #boolean operators
+            TokenType.BOTH_OF, TokenType.EITHER_OF, TokenType.WON_OF,
+            TokenType.NOT, TokenType.ALL_OF, TokenType.ANY_OF,
+            #comparison operators
+            TokenType.BOTH_SAEM, TokenType.DIFFRINT,
+            #string concatenation
+            TokenType.SMOOSH,
+            #type casting
+            TokenType.MAEK,
+            #function calls
+            TokenType.I_IZ,
+            #string delimiters
+            TokenType.STRING_DELIM
+        )
 
-def parse_expression(self):
-    #parses expressions: literals, variables, operations, function calls, etc.
-    if not self.current_token:
-        raise SyntaxError("Unexpected end of file in expression")
-    
-    token_type = self.current_token[1]
-    
-    #simple literals: numbers, strings, booleans, null
-    if token_type in (TokenType.NUMBR, TokenType.NUMBAR, TokenType.YARN,
-                      TokenType.TROOF, TokenType.NOOB):
-        self.advance()
-        return
-    
-    #string with quotes: "content"
-    if token_type == TokenType.STRING_DELIM:
-        self.advance()  #moves past opening quote
-        #parses string content (YARN tokens between quotes)
-        while self.current_token and self.current_token[1] != TokenType.STRING_DELIM:
-            if self.current_token[1] == TokenType.YARN:
-                self.advance()
-            else:
-                break
-        #ensures closing quote exists
-        if not self.match(TokenType.STRING_DELIM):
-            line_num = self.current_token[2] if self.current_token else "EOF"
-            raise SyntaxError(f"Unterminated string literal on line {line_num}")
-        self.advance()  #move past closing quote
-        return
-    
-    #variable reference
-    if token_type == TokenType.VARIDENT:
-        self.advance()
-        return
-    
-    #math operations: SUM OF expr AN expr
-    if token_type in (TokenType.SUM_OF, TokenType.DIFF_OF, TokenType.PRODUKT_OF,
-                      TokenType.QUOSHUNT_OF, TokenType.MOD_OF,
-                      TokenType.BIGGR_OF, TokenType.SMALLR_OF):
-        self.advance()  #moves past operator
-        self.parse_expression()  #parses first operand
-        self.expect(TokenType.AN, "Binary operator requires AN between operands")
-        self.parse_expression()  #parses second operand
-        return
-    
-    #binary boolean operations: BOTH OF expr AN expr
-    if token_type in (TokenType.BOTH_OF, TokenType.EITHER_OF, TokenType.WON_OF):
-        self.advance()  #moves past operator
-        self.parse_expression()  #parses first operand
-        self.expect(TokenType.AN, "Binary operator requires AN between operands")
-        self.parse_expression()  #parses second operand
-        return
-    
-    #NOT operation: NOT expr
-    if token_type == TokenType.NOT:
-        self.advance()  #moves past NOT
-        self.parse_expression()  #parses operand
-        return
-    
-    #multi-argument operations: ALL OF expr AN expr AN expr ... MKAY
-    if token_type in (TokenType.ALL_OF, TokenType.ANY_OF, TokenType.SMOOSH):
-        self.advance()  #moves past operator
+    def parse_expression(self):
+        #parses expressions: literals, variables, operations, function calls, etc.
+        if not self.current_token:
+            raise SyntaxError("Unexpected end of file in expression")
         
-        #parses at least one operand
-        self.parse_expression()
+        token_type = self.current_token[1]
         
-        #parses additional operands separated by AN
-        while self.match(TokenType.AN):
-            self.advance()  #moves past AN
-            self.parse_expression()
-        
-        #ends multi-argument operation with MKAY
-        self.expect(TokenType.MKAY, f"{token_type.value} must end with MKAY")
-        return
-    
-    #comparison operations: BOTH SAEM expr AN expr
-    if token_type in (TokenType.BOTH_SAEM, TokenType.DIFFRINT):
-        self.advance()  #moves past operator
-        self.parse_expression()  #parses first operand
-        self.expect(TokenType.AN, "Comparison operator requires AN between operands")
-        self.parse_expression()  #parses second operand
-        return
-    
-    #type casting: MAEK expression [A] type_keyword
-    if token_type == TokenType.MAEK:
-        self.advance()  #moves past MAEK
-        self.parse_expression()  #parses expression to cast
-        
-        #optional A keyword before type
-        if self.match(TokenType.A):
+        #simple literals: numbers, strings, booleans, null
+        if token_type in (TokenType.NUMBR, TokenType.NUMBAR, TokenType.YARN,
+                        TokenType.TROOF, TokenType.NOOB):
             self.advance()
+            return
         
-        #requires type keyword (NUMBR, NUMBAR, YARN, TROOF, NOOB)
-        if not self.match(TokenType.TYPE_NUMBR, TokenType.TYPE_NUMBAR,
-                         TokenType.TYPE_YARN, TokenType.TYPE_TROOF, TokenType.TYPE_NOOB):
-            line_num = self.current_token[2] if self.current_token else "EOF"
-            raise SyntaxError(f"Expected type keyword after MAEK on line {line_num}")
+        #string with quotes: "content"
+        if token_type == TokenType.STRING_DELIM:
+            self.advance()  #moves past opening quote
+            #parses string content (YARN tokens between quotes)
+            while self.current_token and self.current_token[1] != TokenType.STRING_DELIM:
+                if self.current_token[1] == TokenType.YARN:
+                    self.advance()
+                else:
+                    break
+            #ensures closing quote exists
+            if not self.match(TokenType.STRING_DELIM):
+                line_num = self.current_token[2] if self.current_token else "EOF"
+                raise SyntaxError(f"Unterminated string literal on line {line_num}")
+            self.advance()  #move past closing quote
+            return
         
-        self.advance()  #moves past type keyword
-        return
-    
-    #function call within expression
-    if token_type == TokenType.I_IZ:
-        self.parse_function_call()
-        return
-    
-    #invalid expression start, prints error message
-    line_num = self.current_token[2]
-    raise SyntaxError(
-        f"Invalid expression starting with '{self.current_token[0]}' on line {line_num}"
-    )
+        #variable reference
+        if token_type == TokenType.VARIDENT:
+            self.advance()
+            return
+        
+        #math operations: SUM OF expr AN expr
+        if token_type in (TokenType.SUM_OF, TokenType.DIFF_OF, TokenType.PRODUKT_OF,
+                        TokenType.QUOSHUNT_OF, TokenType.MOD_OF,
+                        TokenType.BIGGR_OF, TokenType.SMALLR_OF):
+            self.advance()  #moves past operator
+            self.parse_expression()  #parses first operand
+            self.expect(TokenType.AN, "Binary operator requires AN between operands")
+            self.parse_expression()  #parses second operand
+            return
+        
+        #binary boolean operations: BOTH OF expr AN expr
+        if token_type in (TokenType.BOTH_OF, TokenType.EITHER_OF, TokenType.WON_OF):
+            self.advance()  #moves past operator
+            self.parse_expression()  #parses first operand
+            self.expect(TokenType.AN, "Binary operator requires AN between operands")
+            self.parse_expression()  #parses second operand
+            return
+        
+        #NOT operation: NOT expr
+        if token_type == TokenType.NOT:
+            self.advance()  #moves past NOT
+            self.parse_expression()  #parses operand
+            return
+        
+        #multi-argument operations: ALL OF expr AN expr AN expr ... MKAY
+        if token_type in (TokenType.ALL_OF, TokenType.ANY_OF, TokenType.SMOOSH):
+            self.advance()  #moves past operator
+            
+            #parses at least one operand
+            self.parse_expression()
+            
+            #parses additional operands separated by AN
+            while self.match(TokenType.AN):
+                self.advance()  #moves past AN
+                self.parse_expression()
+            
+            #ends multi-argument operation with MKAY
+            self.expect(TokenType.MKAY, f"{token_type.value} must end with MKAY")
+            return
+        
+        #comparison operations: BOTH SAEM expr AN expr
+        if token_type in (TokenType.BOTH_SAEM, TokenType.DIFFRINT):
+            self.advance()  #moves past operator
+            self.parse_expression()  #parses first operand
+            self.expect(TokenType.AN, "Comparison operator requires AN between operands")
+            self.parse_expression()  #parses second operand
+            return
+        
+        #type casting: MAEK expression [A] type_keyword
+        if token_type == TokenType.MAEK:
+            self.advance()  #moves past MAEK
+            self.parse_expression()  #parses expression to cast
+            
+            #optional A keyword before type
+            if self.match(TokenType.A):
+                self.advance()
+            
+            #requires type keyword (NUMBR, NUMBAR, YARN, TROOF, NOOB)
+            if not self.match(TokenType.TYPE_NUMBR, TokenType.TYPE_NUMBAR,
+                            TokenType.TYPE_YARN, TokenType.TYPE_TROOF, TokenType.TYPE_NOOB):
+                line_num = self.current_token[2] if self.current_token else "EOF"
+                raise SyntaxError(f"Expected type keyword after MAEK on line {line_num}")
+            
+            self.advance()  #moves past type keyword
+            return
+        
+        #function call within expression
+        if token_type == TokenType.I_IZ:
+            self.parse_function_call()
+            return
+        
+        #invalid expression start, prints error message
+        line_num = self.current_token[2]
+        raise SyntaxError(
+            f"Invalid expression starting with '{self.current_token[0]}' on line {line_num}"
+        )
 
 def parse_tokens(tokens): #function to simplify use in gui code
     parser = Parser(tokens)
