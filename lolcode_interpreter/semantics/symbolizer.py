@@ -1,4 +1,4 @@
-from lexer import TokenType
+from lexer.lol_tokens import TokenType
 
 def get_value(tokens, symbol_table): #helper function: converts expression into a single string value ("noot noot" var => noot noot 12)
     values = []
