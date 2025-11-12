@@ -1,478 +1,279 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import sys
-import os
+import os, sys
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-
-if script_dir not in sys.path:
-    sys.path.insert(0, script_dir)
+# import modules (tokenizer + symbolizer)
+script_dir = os.path.dirname(os.path.abspath(__file__))  # current script directory
+sys.path.insert(0, script_dir)  # add script directory
 
 try:
-    from lexer import tokenize_program, TokenType
-    from lexer.lol_tokens import TOKEN_DESCRIPTIONS
-    from symbolizer import symbolize
-
+    from lexer import tokenize_program, TokenType  # tokenizer and token types
+    from lexer.lol_tokens import TOKEN_DESCRIPTIONS  #  token descriptions
+    from symbolizer import symbolize  
 except ImportError as e:
-    print("\n========== IMPORT ERROR DEBUG ==========")
-    print(f"⚠️ ImportError: {e}\n")
-    print("🔍 Debug Info:")
-    print(f"  • Script path: {__file__}")
-    print(f"  • Script directory: {script_dir}")
-    print(f"  • Current working directory: {os.getcwd()}")
-    print(f"  • sys.path entries:")
-    for p in sys.path:
-        print(f"    - {p}")
-    print("\n🧩 Expected structure (relative to script_dir):")
-    print("  lexer/")
-    print("    ├── __init__.py")
-    print("    ├── lexer.py")
-    print("    └── lol_tokens.py\n")
-    print("💡 Tips:")
-    print("  1. Make sure you're running the script *from the project root*, e.g.:")
-    print("       cd", script_dir)
-    print("       python lolcode_gui.py")
-    print("  2. Check that 'lexer' folder exists in the same directory as this file.")
-    print("  3. Ensure '__init__.py' exists inside the 'lexer' folder.\n")
-    print("=========================================\n")
-    sys.exit(1)
+    print("import error:", e)  
+    sys.exit(1)  # exit if import fails
 
+# lolcode interpreter gui
 class LOLCodeInterpreterGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("TBD LOLTERPRETER")
-        self.root.geometry("1200x700")
-        
+        self.root.title("lolcode interpreter")  
+        self.root.geometry("1100x700")  
+
+        # color 
+        self.bg_color = "#1e1e1e"     # main background
+        self.fg_color = "#ffffff"     # main text
+        self.text_bg = "#252526"      # text editor bg
+        self.text_fg = "#dcdcdc"      # editor text
+        self.highlight = "#0078d7"    # accent blue
+        self.tree_bg = "#2d2d30"      # tree bg
+        self.tree_alt = "#3e3e42"     # alternate row
+        self.tree_fg = "#ffffff"      # tree text
+        self.console_bg = "#1b1b1b"   # console bg
+        self.console_fg = "#00ff9f"   # console text
+
+        # store current file info and tokens 
         self.current_file = None
+        self.original_content = ""
         self.tokens = []
-        self.original_content = ""  #track unsaved changes
-        
-        #create menu bar
-        self.create_menu()
-        
-        #create main container
-        main_container = tk.Frame(root)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        #create top section (file path)
-        self.create_file_path_section(main_container)
-        
-        #create middle section (3-column layout)
-        self.create_middle_section(main_container)
-        
-        #create bottom section (execute button and console)
-        self.create_bottom_section(main_container)
-    
+
+        # gui layout 
+        self.create_menu()   # menu
+        self.create_layout() 
+
+    # menu
     def create_menu(self):
-        menubar = tk.Menu(self.root)
+        menubar = tk.Menu(self.root)  # main menu bar
         self.root.config(menu=menubar)
-        
-        #file menu
+
+        # for file fropwdown
         file_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Open", command=self.open_file, accelerator="Ctrl+O")
-        file_menu.add_command(label="Save", command=self.save_file, accelerator="Ctrl+S")
-        file_menu.add_command(label="Save As...", command=self.save_file_as, accelerator="Ctrl+Shift+S")
+        menubar.add_cascade(label="file", menu=file_menu)
+
+        # menu options
+        file_menu.add_command(label="open", command=self.open_file, accelerator="ctrl+o")
+        file_menu.add_command(label="save", command=self.save_file, accelerator="ctrl+s")
+        file_menu.add_command(label="save as...", command=self.save_file_as, accelerator="ctrl+shift+s")
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.root.quit)
-        
-        #keyboard shortcuts
-        self.root.bind('<Control-o>', lambda e: self.open_file())
-        self.root.bind('<Control-s>', lambda e: self.save_file())
-        self.root.bind('<Control-Shift-S>', lambda e: self.save_file_as())
-    
-    def create_file_path_section(self, parent):
-        path_frame = tk.Frame(parent, bg='#f0f0f0', height=30)
-        path_frame.pack(fill=tk.X, pady=(0, 5))
-        path_frame.pack_propagate(False)
-        
-        self.file_path_label = tk.Label(
-            path_frame, 
-            text="(None)", 
-            bg='#f0f0f0', 
-            fg='#666666',
-            anchor='w',
-            padx=10,
-            font=('Arial', 10)
-        )
-        self.file_path_label.pack(fill=tk.BOTH, expand=True)
-    
-    def create_middle_section(self, parent):
-        #create PanedWindow for resizable columns
-        paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=4)
+        file_menu.add_command(label="exit", command=self.root.quit)
+
+        # keyboard shorty
+        self.root.bind("<Control-o>", lambda e: self.open_file())
+        self.root.bind("<Control-s>", lambda e: self.save_file())
+        self.root.bind("<Control-Shift-S>", lambda e: self.save_file_as())
+
+    # main layout
+    def create_layout(self):
+        self.root.configure(bg=self.bg_color)  # set root bg
+
+        container = tk.Frame(self.root, bg=self.bg_color)  # main container frame
+        container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # label for opened file name
+        self.file_label = tk.Label(container, text="(no file opened)", bg=self.bg_color,
+                                   fg=self.fg_color, anchor="w", padx=10)
+        self.file_label.pack(fill=tk.X, pady=(0, 5))
+
+        # for the resizable panels
+        paned = tk.PanedWindow(container, orient=tk.HORIZONTAL, sashwidth=4, bg=self.bg_color)
         paned.pack(fill=tk.BOTH, expand=True)
-        
-        # Left panel - Text Editor
-        self.create_text_editor(paned)
-        
-        # Middle panel - Lexemes Table
-        self.create_lexemes_table(paned)
-        
-        # Right panel - Symbol Table 
-        self.create_symbol_table(paned)
-    
-    def create_text_editor(self, paned):
-        editor_frame = tk.Frame(paned)
-        paned.add(editor_frame, width=400)
-        
-        #add scrollbar
-        scrollbar = tk.Scrollbar(editor_frame)
+
+        # text editor
+        self.text_editor = self.add_text_editor(paned, "code editor", width=400)
+
+        # lexemes table
+        self.lexemes_tree = self.add_treeview(paned, "lexemes", ["lexeme", "classification"], 200)
+
+        # symbol table
+        self.symbol_tree = self.add_treeview(paned, "symbol table", ["identifier", "value"], 150)
+
+        # console output and execute button
+        self.add_console_section(container)
+
+    # helpers
+    def add_text_editor(self, parent, label_text, width):
+        frame = tk.Frame(parent, bg=self.bg_color)  # frame for editor
+        parent.add(frame, width=width)  # add to paned window
+
+        lbl = tk.Label(frame, text=label_text, font=("arial", 11, "bold"),
+                       bg=self.bg_color, fg=self.fg_color)
+        lbl.pack(fill=tk.X)
+
+        scrollbar = tk.Scrollbar(frame)  # vertical scrollbar
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        #create text widget
-        self.text_editor = tk.Text(
-            editor_frame,
-            wrap=tk.NONE,
-            yscrollcommand=scrollbar.set,
-            font=('Consolas', 11),
-            bg='white',
-            fg='black',
-            insertbackground='black',
-            selectbackground='#0078d7',
-            selectforeground='white'
-        )
-        self.text_editor.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.text_editor.yview)
-        
-        self.add_line_numbers()
-    
-    def add_line_numbers(self):
-        pass
-    
-    def create_lexemes_table(self, paned):
-        lexemes_frame = tk.Frame(paned)
-        paned.add(lexemes_frame, width=400)
-        
-        #add label
-        label = tk.Label(lexemes_frame, text="Lexemes", font=('Arial', 12, 'bold'), bg='#f0f0f0')
-        label.pack(fill=tk.X, pady=(0, 5))
-        
-        #create treeview with scrollbar
-        tree_frame = tk.Frame(lexemes_frame)
+
+        text = tk.Text(frame, wrap="none", yscrollcommand=scrollbar.set,
+                       font=("consolas", 11), bg=self.text_bg, fg=self.text_fg,
+                       insertbackground=self.fg_color)  # editor text
+        text.pack(fill=tk.BOTH, expand=True)
+        scrollbar.config(command=text.yview)  # link scrollbar
+        return text  # return the text editor widget
+
+    def add_treeview(self, parent, label_text, columns, col_width):
+        frame = tk.Frame(parent, bg=self.bg_color)  # frame for tree
+        parent.add(frame, width=300)
+
+        lbl = tk.Label(frame, text=label_text, font=("arial", 11, "bold"),
+                       bg=self.bg_color, fg=self.fg_color)
+        lbl.pack(fill=tk.X)
+
+        tree_frame = tk.Frame(frame)  # inner frame for tree + scrollbars
         tree_frame.pack(fill=tk.BOTH, expand=True)
-        
-        #scrollbars
+
+        # scrollbars
         vsb = tk.Scrollbar(tree_frame, orient="vertical")
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        
         hsb = tk.Scrollbar(tree_frame, orient="horizontal")
         hsb.pack(side=tk.BOTTOM, fill=tk.X)
-        
-        #treeview
-        self.lexemes_tree = ttk.Treeview(
-            tree_frame,
-            columns=('Lexeme', 'Classification'),
-            show='headings',
-            yscrollcommand=vsb.set,
-            xscrollcommand=hsb.set
-        )
-        
-        self.lexemes_tree.heading('Lexeme', text='Lexeme')
-        self.lexemes_tree.heading('Classification', text='Classification')
-        
-        self.lexemes_tree.column('Lexeme', width=150, anchor='w')
-        self.lexemes_tree.column('Classification', width=200, anchor='w')
-        
-        self.lexemes_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        vsb.config(command=self.lexemes_tree.yview)
-        hsb.config(command=self.lexemes_tree.xview)
-        
-        #configure alternating row colors
-        self.lexemes_tree.tag_configure('oddrow', background='white')
-        self.lexemes_tree.tag_configure('evenrow', background='#f0f0f0')
-    
-    def create_symbol_table(self, paned):
-        symbol_frame = tk.Frame(paned, bg='white')
-        paned.add(symbol_frame, width=300)
-        
-        #add label
-        label = tk.Label(symbol_frame, text="SYMBOL TABLE", font=('Arial', 12, 'bold'), bg='#f0f0f0')
-        label.pack(fill=tk.X, pady=(0, 5))
-        
-        #placeholder content
-        placeholder_frame = tk.Frame(symbol_frame, bg='white')
-        placeholder_frame.pack(fill=tk.BOTH, expand=True)
-        
-        #create treeview structure 
-        tree_frame = tk.Frame(placeholder_frame)
-        tree_frame.pack(fill=tk.BOTH, expand=True)
-        
-        vsb = tk.Scrollbar(tree_frame, orient="vertical")
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.symbol_tree = ttk.Treeview(
-            tree_frame,
-            columns=('Identifier', 'Value'),
-            show='headings',
-            yscrollcommand=vsb.set
-        )
-        
-        self.symbol_tree.heading('Identifier', text='Identifier')
-        self.symbol_tree.heading('Value', text='Value')
-        
-        self.symbol_tree.column('Identifier', width=100, anchor='w')
-        self.symbol_tree.column('Value', width=150, anchor='w')
-        
-        self.symbol_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        vsb.config(command=self.symbol_tree.yview)
-        
-        #configure alternating row colors
-        self.symbol_tree.tag_configure('oddrow', background='white')
-        self.symbol_tree.tag_configure('evenrow', background='#f0f0f0')
-    
-    def create_bottom_section(self, parent):
-        bottom_frame = tk.Frame(parent)
-        bottom_frame.pack(fill=tk.BOTH, expand=False, pady=(5, 0))
-        
-        #execute button
-        self.execute_btn = tk.Button(
-            bottom_frame,
-            text="EXECUTE",
-            command=self.execute,
-            font=('Arial', 11, 'bold'),
-            bg='#0078d7',
-            fg='white',
-            activebackground='#005a9e',
-            activeforeground='white',
-            padx=20,
-            pady=8,
-            relief=tk.RAISED,
-            cursor='hand2'
-        )
-        self.execute_btn.pack(pady=(0, 5))
-        
-        #console output (placeholder palang for now)
-        console_frame = tk.Frame(bottom_frame, bg='white', relief=tk.SUNKEN, borderwidth=1)
+
+        # treeview widget
+        tree = ttk.Treeview(tree_frame, columns=columns, show="headings",
+                            yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=col_width, anchor="w")
+        tree.pack(fill=tk.BOTH, expand=True)
+
+        vsb.config(command=tree.yview)  # link vertical scrollbar
+        hsb.config(command=tree.xview)  # link horizontal scrollbar
+
+        # tree style
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Dark.Treeview",
+                        background=self.tree_bg,
+                        fieldbackground=self.tree_bg,
+                        foreground=self.tree_fg,
+                        rowheight=20)
+        style.map("Dark.Treeview",
+                  background=[("selected", self.highlight)],
+                  foreground=[("selected", "#ffffff")])
+        tree.configure(style="Dark.Treeview")
+
+        # for the alternating row colors
+        tree.tag_configure("oddrow", background=self.tree_bg)
+        tree.tag_configure("evenrow", background=self.tree_alt)
+
+        return tree
+
+    def add_console_section(self, parent):
+        frame = tk.Frame(parent, bg=self.bg_color)
+        frame.pack(fill=tk.BOTH, expand=False, pady=5)
+
+        # execute the button
+        btn = tk.Button(frame, text="execute", bg=self.highlight, fg="white",
+                        font=("arial", 11, "bold"), padx=20, pady=5, command=self.execute)
+        btn.pack(pady=(0, 5))
+
+        # console output area
+        console_frame = tk.Frame(frame)
         console_frame.pack(fill=tk.BOTH, expand=True)
-        
-        #scrollbar for console
-        console_scroll = tk.Scrollbar(console_frame)
-        console_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.console_text = tk.Text(
-            console_frame,
-            height=8,
-            bg='white',
-            fg='black',
-            font=('Consolas', 10),
-            state=tk.DISABLED,
-            yscrollcommand=console_scroll.set
-        )
-        self.console_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        console_scroll.config(command=self.console_text.yview)
-    
+
+        scrollbar = tk.Scrollbar(console_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.console = tk.Text(console_frame, height=8, bg=self.console_bg,
+                               fg=self.console_fg, font=("consolas", 10),
+                               state=tk.DISABLED, yscrollcommand=scrollbar.set,
+                               insertbackground=self.fg_color)
+        self.console.pack(fill=tk.BOTH, expand=True)
+        scrollbar.config(command=self.console.yview)
+
+    # file operations
     def open_file(self):
-        #checker for unsaved changes
-        if self.has_unsaved_changes():
-            response = messagebox.askyesnocancel(
-                "Unsaved Changes",
-                "Do you want to save changes before opening a new file?"
-            )
-            if response is True:  
-                self.save_file()
-            elif response is None: 
-                return
-        
-        filename = filedialog.askopenfilename(
-            title="Open LOLCode File",
-            filetypes=[
-                ("LOLCode Files", "*.lol"), 
-                ("Text Files", "*.txt"), 
-                ("All Files", "*.*"),
-            ],
-            initialdir=os.path.dirname(self.current_file) if self.current_file else os.getcwd()
-        )
-        
-        if filename:
-            try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    content = f.read()
+        if self.has_unsaved_changes():  # check unsaved changes
+            res = messagebox.askyesnocancel("unsaved changes", "save before opening another file?")
+            if res: self.save_file()
+            elif res is None: return  # cancel
 
-                #validate file is not empty
-                if not content.strip():
-                    response = messagebox.askyesno(
-                        "Empty File",
-                        "The selected file is empty. Open anyway?"
-                    )
-                    if not response:
-                        return
-                
-                self.text_editor.delete(1.0, tk.END)
-                self.text_editor.insert(1.0, content)
-                
-                self.current_file = filename
-                self.original_content = content  #track for unsaved changes
-                
-                #update UI
-                self.file_path_label.config(text=os.path.basename(filename))
-                self.file_path_label.config(fg='#333333')  # Reset color
+        filename = filedialog.askopenfilename(filetypes=[("lolcode", "*.lol"), ("text", "*.txt")])
+        if not filename: return
 
-                #clear analysis results
-                self.clear_lexemes_table()
-                self.clear_console()
-                
-                #update console with success message
-                self.update_console(
-                    f"✓ Opened: {os.path.basename(filename)}\n"
-                    f"Lines: {content.count(chr(10)) + 1}\n"
-                    f"Characters: {len(content)}"
-                )
-
-                #optional: Show file info in status bar
-                if hasattr(self, 'status_label'):
-                    self.status_label.config(text=f"Opened: {os.path.basename(filename)}")
-                
-            except UnicodeDecodeError:
-                messagebox.showerror(
-                    "Encoding Error",
-                    "Failed to open file: Invalid text encoding.\n"
-                    "The file may be binary or use an unsupported encoding."
-                )
-            except PermissionError:
-                messagebox.showerror(
-                    "Permission Denied",
-                    f"Cannot open file:\n{filename}\n\n"
-                    "You don't have permission to read this file."
-                )
-            except FileNotFoundError:
-                messagebox.showerror(
-                    "File Not Found",
-                    f"The file no longer exists:\n{filename}"
-                )
-            except Exception as e:
-                messagebox.showerror(
-                    "Error",
-                    f"Failed to open file:\n{str(e)}"
-                )
-
-    def has_unsaved_changes(self):
-        if not hasattr(self, 'original_content'):
-            self.original_content = ""
-    
-        current_content = self.text_editor.get(1.0, tk.END).rstrip('\n')
-        return current_content != self.original_content.rstrip('\n')
-
-    def clear_console(self):
-        self.console_text.config(state=tk.NORMAL)
-        self.console_text.delete(1.0, tk.END)
-        self.console_text.config(state=tk.DISABLED)
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.text_editor.delete(1.0, tk.END)
+            self.text_editor.insert(tk.END, content)  # insert file content
+            self.current_file = filename
+            self.original_content = content
+            self.file_label.config(text=os.path.basename(filename))
+            self.clear_tables()  # clear previous lexemes/symbols
+            self.update_console(f"opened: {filename}")  # log open
+        except Exception as e:
+            messagebox.showerror("error", str(e))
 
     def save_file(self):
-        if self.current_file:
-            try:
-                content = self.text_editor.get(1.0, tk.END)
-                with open(self.current_file, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                
-                #update original_content after saving
-                self.original_content = content
-                
-                messagebox.showinfo("Success", "File saved successfully!")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save file:\n{str(e)}")
-        else:
-            self.save_file_as()
-    
-    def save_file_as(self):
-        filename = filedialog.asksaveasfilename(
-            title="Save LOLCode File",
-            defaultextension=".lol",
-            filetypes=[("LOLCode Files", "*.lol"), ("All Files", "*.*")]
-        )
-        
-        if filename:
-            try:
-                content = self.text_editor.get(1.0, tk.END)
-                with open(filename, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                
-                self.current_file = filename
-                self.original_content = content  #track content after save
-                self.file_path_label.config(text=os.path.basename(filename))
-                
-                messagebox.showinfo("Success", "File saved successfully!")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to save file:\n{str(e)}")
-    
-    def execute(self):
-        #get the code from text editor
-        source_code = self.text_editor.get(1.0, tk.END)
-        
-        if not source_code.strip():
-            messagebox.showwarning("Warning", "No code to execute!")
-            return
-        
+        if not self.current_file:  # if no file, use save as
+            return self.save_file_as()
+
         try:
-            #tokenize the program
-            self.tokens = tokenize_program(source_code)
-            
-            #update lexemes table
-            self.update_lexemes_table()
-
-            # interpret variable values
-            symbol_table = symbolize(self.tokens)
-
-            # update symbols table
-            self.update_symbol_table(symbol_table)
-            
-            #update console with success message
-            self.update_console(f"Lexical analysis complete!\nTotal tokens: {len(self.tokens)}")
-            
+            content = self.text_editor.get(1.0, tk.END)
+            with open(self.current_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            self.original_content = content  # update saved content
+            messagebox.showinfo("saved", "file saved successfully!")
         except Exception as e:
-            messagebox.showerror("Error", f"Lexical analysis failed:\n{str(e)}")
-            self.update_console(f"ERROR: {str(e)}")
-    
-    def clear_lexemes_table(self):
-        for item in self.lexemes_tree.get_children():
-            self.lexemes_tree.delete(item)
-    
-    def update_lexemes_table(self):
-        #clear existing items
-        self.clear_lexemes_table()
-        
-        #filter out linebreaks
-        display_tokens = [t for t in self.tokens if t[1] != TokenType.LINEBREAK]
-        
-        #add tokens to the table
-        for idx, (lexeme, token_type, line_num) in enumerate(display_tokens):
-            tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
-            self.lexemes_tree.insert(
-                '',
-                tk.END,
-                values=(lexeme, TOKEN_DESCRIPTIONS.get(token_type, token_type.value)),
-                tags=(tag,)
-            )
-    
-    def update_console(self, message):
-        self.console_text.config(state=tk.NORMAL)
-        self.console_text.delete(1.0, tk.END)
-        self.console_text.insert(1.0, message)
-        self.console_text.config(state=tk.DISABLED)
+            messagebox.showerror("error", str(e))
 
-    def clear_symbol_table(self):
-        for item in self.symbol_tree.get_children():
-            self.symbol_tree.delete(item)
+    def save_file_as(self):
+        filename = filedialog.asksaveasfilename(defaultextension=".lol",
+                                                filetypes=[("lolcode", "*.lol")])
+        if filename:
+            self.current_file = filename
+            self.save_file()
 
-    def update_symbol_table(self, symbol_table):
-        # clear existing items
-        self.clear_symbol_table()
+    def has_unsaved_changes(self):
+        current = self.text_editor.get(1.0, tk.END).strip()  # get current editor content
+        return current != self.original_content.strip()  # compare with original
 
-        #add tokens to the table
-        for idx, (identifier, value) in enumerate(symbol_table.items()):
-            tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
-            self.symbol_tree.insert(
-                '',
-                tk.END,
-                values = (identifier, value),
-                tags = (tag,)
-            )
+    # exercution
+    def execute(self):
+        code = self.text_editor.get(1.0, tk.END).strip()  # get current code
+        if not code:
+            self.update_console("no code to execute!\n")
+            return
 
-def main():
-    root = tk.Tk()
-    app = LOLCodeInterpreterGUI(root)
-    root.mainloop()
+        try:
+            self.tokens = tokenize_program(code)  # tokenize code
+            symbol_table = symbolize(self.tokens)  # generate symbol table
+            self.update_lexemes()  # update lexeme table
+            self.update_symbols(symbol_table)  # update symbol table
+            self.update_console(f"lexical analysis complete!\ntokens: {len(self.tokens)}\n")  # log
+        except Exception as e:
+            self.update_console(f"error: {e}\n")
+            messagebox.showerror("error", str(e))
 
+    # table updates
+    def clear_tables(self):
+        for tree in [self.lexemes_tree, self.symbol_tree]:  # clear all tables
+            for item in tree.get_children():
+                tree.delete(item)
 
+    def update_lexemes(self):
+        self.clear_tables()
+        filtered = [t for t in self.tokens if t[1] != TokenType.LINEBREAK]  # skip linebreak tokens
+        for i, (lexeme, token_type, _) in enumerate(filtered):
+            tag = "evenrow" if i % 2 == 0 else "oddrow"  # alternate row
+            desc = TOKEN_DESCRIPTIONS.get(token_type, token_type.value)  # get description
+            self.lexemes_tree.insert("", tk.END, values=(lexeme, desc), tags=(tag,))
+
+    def update_symbols(self, symbols):
+        for i, (name, val) in enumerate(symbols.items()):
+            tag = "evenrow" if i % 2 == 0 else "oddrow"
+            self.symbol_tree.insert("", tk.END, values=(name, val), tags=(tag,))
+
+    # console
+    def update_console(self, text):
+        self.console.config(state=tk.NORMAL)
+        if not text.endswith("\n"):  # ensure newline
+            text += "\n"
+        self.console.insert(tk.END, text)  # append text
+        self.console.see(tk.END)  # scroll to end
+        self.console.config(state=tk.DISABLED)
+
+# main
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    LOLCodeInterpreterGUI(root)  # start gui
+    root.mainloop()
