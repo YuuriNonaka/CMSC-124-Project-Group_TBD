@@ -9,7 +9,8 @@ sys.path.insert(0, script_dir)  # add script directory
 try:
     from lexer import tokenize_program, TokenType  # tokenizer and token types
     from lexer.lol_tokens import TOKEN_DESCRIPTIONS  #  token descriptions
-    from symbolizer import symbolize  
+    from semantics import symbolize
+    from parser import Parser, SyntaxError as LOLSyntaxError 
 except ImportError as e:
     print("import error:", e)  
     sys.exit(1)  # exit if import fails
@@ -229,20 +230,42 @@ class LOLCodeInterpreterGUI:
 
     # exercution
     def execute(self):
-        code = self.text_editor.get(1.0, tk.END).strip()  # get current code
-        if not code:
-            self.update_console("no code to execute!\n")
+        """Execute lexical, syntax, and semantic analysis."""
+        # Get the code from text editor
+        source_code = self.text_editor.get(1.0, tk.END)
+        
+        if not source_code.strip():
+            messagebox.showwarning("Warning", "No code to execute!")
             return
-
+        
         try:
-            self.tokens = tokenize_program(code)  # tokenize code
-            symbol_table = symbolize(self.tokens)  # generate symbol table
-            self.update_lexemes()  # update lexeme table
-            self.update_symbols(symbol_table)  # update symbol table
-            self.update_console(f"lexical analysis complete!\ntokens: {len(self.tokens)}\n")  # log
+            #lexical analysis
+            self.tokens = tokenize_program(source_code)
+            self.update_lexemes()
+            
+            #syntax analysis
+            parser = Parser(self.tokens)
+            parser.parse()  #raises LOLSyntaxError if invalid
+            
+            #semantic analysis
+            symbol_table = symbolize(self.tokens)
+            self.update_symbols(symbol_table)
+            
+            #success message
+            self.update_console(
+                f"Syntax check passed!\n"
+                f"Total tokens: {len(self.tokens)}\n"
+                f"Variables declared: {len(symbol_table)}"
+            )
+            
+        except LOLSyntaxError as e:
+            #syntax error - prints in console
+            self.update_console(f"SYNTAX ERROR:\n{str(e)}")
+            
         except Exception as e:
-            self.update_console(f"error: {e}\n")
-            messagebox.showerror("error", str(e))
+            #other errors
+            messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
+            self.update_console(f"ERROR: {str(e)}")
 
     # table updates
     def clear_tables(self):
