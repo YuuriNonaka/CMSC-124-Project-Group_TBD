@@ -6,12 +6,13 @@ A comprehensive interpreter for the LOLCode esoteric programming language, devel
 
 This interpreter implements lexical, syntactical, and semantic analysis for LOLCode programs (.lol files). The project follows the specifications outlined in the CMSC 124 project requirements and aims to create a fully functional interpreter with a graphical user interface.
 
-### Current Status: **Syntax Analysis Complete** ✔
+### Current Status: **Abstract Syntax Tree Complete** ✔
 
 - **Lexer**: Fully implemented and operational ✅
-- **Parser**: Complete syntax validation with detailed error reporting ✅
+- **Parser**: Complete syntax validation with AST construction ✅
+- **AST**: Complete node structure for all LOLCode constructs ✅
 - **Semantic Analyzer**: Basic symbol table construction implemented ⚙️
-- **GUI**: Integrated interface with all three phases ✅
+- **GUI**: Integrated interface with all phases ✅
 
 ## Project Structure
 
@@ -22,8 +23,9 @@ lolcode_interpreter/
 │   ├── lexer.py           # Main lexical analyzer
 │   └── lol_tokens.py      # Token definitions, patterns, and human-readable descriptions
 ├── parser/
-│   ├── __init__.py        # Package initializer - exports Parser and SyntaxError
-│   └── parser.py          # Recursive-descent syntax analyzer
+│   ├── __init__.py        # Package initializer - exports Parser, SyntaxError, and AST nodes
+│   ├── parser.py          # Recursive-descent syntax analyzer with AST construction
+│   └── ast_nodes.py       # AST node class definitions for all LOLCode constructs
 ├── semantics/
 │   ├── __init__.py        # Package initializer - exports symbolize and get_value
 │   └── symbolizer.py      # Symbol table construction and management
@@ -50,7 +52,7 @@ python lolcode_gui.py
 python lexer/lexer.py test_cases/01_variables.lol [--show-linebreaks]
 ```
 
-**Parser:**
+**Parser with AST:**
 ```python
 from lexer import tokenize_program
 from parser import Parser, SyntaxError as LOLSyntaxError
@@ -60,8 +62,9 @@ tokens = tokenize_program(code)
 
 try:
     parser = Parser(tokens)
-    parser.parse()
+    ast = parser.parse()  # Returns AST root node
     print("✅ Syntax is valid!")
+    print(f"Program has {len(ast.statements)} statements")
 except LOLSyntaxError as e:
     print(f"❌ {e}")
 ```
@@ -75,14 +78,14 @@ The graphical interface provides an integrated development environment for LOLCo
 - **File Operations** - Open, Save, and Save As functionality with keyboard shortcuts
 - **Lexemes Table** - View tokenized output with human-readable classifications
 - **Symbol Table Display** - Shows variable declarations and their current values
-- **Syntax Validation** - Real-time syntax checking with detailed error messages
+- **Syntax Validation** - Real-time syntax checking with detailed error messages and AST construction
 - **Console Output** - Displays analysis results, syntax errors, and execution status
 - **File Path Display** - Shows currently loaded file
 
 ### Analysis Pipeline
 When you click **EXECUTE**, the interpreter runs:
 1. **Lexical Analysis** → Tokenizes the source code
-2. **Syntax Analysis** → Validates program structure
+2. **Syntax Analysis** → Validates program structure and builds AST
 3. **Semantic Analysis** → Builds symbol table and checks semantics
 
 If syntax errors are found, they appear in the console with specific line numbers and helpful messages.
@@ -139,21 +142,109 @@ The main GUI application built with tkinter.
 └──────────────────────────────────────────────────┘
 ```
 
+### `parser/ast_nodes.py`
+Defines AST node classes for representing LOLCode program structure.
+
+**Base Class:**
+- **ASTNode**: Base class for all AST nodes
+
+**Program Structure:**
+- **ProgramNode**: Root node representing entire program
+  - `version` - Optional version number
+  - `statements` - List of statement nodes
+
+**Variable Operations:**
+- **VariableDeclNode**: Variable declaration (`I HAS A`)
+  - `var_name` - Variable identifier
+  - `initial_value` - Optional initialization expression
+- **AssignmentNode**: Variable assignment (`R`)
+  - `var_name` - Target variable
+  - `expression` - Value expression
+
+**I/O Operations:**
+- **VisibleNode**: Output statement
+  - `expressions` - List of expressions to display
+- **GimmehNode**: Input statement
+  - `var_name` - Variable to receive input
+
+**Expressions:**
+- **LiteralNode**: Literal values (numbers, strings, booleans)
+  - `value` - Literal value
+  - `literal_type` - Token type
+- **VariableNode**: Variable reference
+  - `var_name` - Referenced variable
+- **BinaryOpNode**: Binary operations (arithmetic, boolean)
+  - `operator` - Operation type
+  - `left`, `right` - Operand expressions
+- **UnaryOpNode**: Unary operations (NOT)
+  - `operator` - Operation type
+  - `operand` - Single operand
+- **InfiniteArityOpNode**: Variable-arity operations (ALL OF, ANY OF, SMOOSH)
+  - `operator` - Operation type
+  - `operands` - List of operand expressions
+- **ComparisonNode**: Comparison operations
+  - `operator` - Comparison type
+  - `left`, `right` - Operands
+- **TypecastNode**: Type conversion
+  - `expression` - Expression to cast
+  - `target_type` - Desired type
+
+**Control Flow:**
+- **ConditionalNode**: If-else structure (O RLY?)
+  - `if_block` - Statements for true condition
+  - `elif_blocks` - List of else-if clauses
+  - `else_block` - Statements for false condition
+- **ElifClauseNode**: Else-if clause (MEBBE)
+  - `condition` - Condition expression
+  - `statements` - Block statements
+- **SwitchNode**: Switch-case structure (WTF?)
+  - `cases` - List of case nodes
+  - `default_case` - Default case statements
+- **CaseNode**: Single case (OMG)
+  - `literal_value` - Case value
+  - `statements` - Block statements
+- **LoopNode**: Loop structure (IM IN YR)
+  - `label` - Loop identifier
+  - `operation` - UPPIN or NERFIN
+  - `var_name` - Loop variable
+  - `condition` - Optional loop condition
+  - `condition_type` - TIL or WILE
+  - `statements` - Loop body
+
+**Functions:**
+- **FunctionDefNode**: Function definition (HOW IZ I)
+  - `func_name` - Function identifier
+  - `parameters` - List of parameter names
+  - `statements` - Function body
+- **FunctionCallNode**: Function call (I IZ)
+  - `func_name` - Function identifier
+  - `arguments` - List of argument expressions
+- **ReturnNode**: Return statement (FOUND YR)
+  - `expression` - Return value
+- **BreakNode**: Break statement (GTFO)
+
 ### `parser/parser.py`
-Implements recursive-descent syntax validation for LOLCode programs.
+Implements recursive-descent syntax validation and AST construction for LOLCode programs.
 
 **Key Components:**
 - **Parser Class**: Main parsing engine with token stream management
-  - `parse()` - Entry point for full program validation
-  - `parse_program()` - Validates HAI...KTHXBYE structure
+  - `parse()` - Entry point for full program validation, returns AST
+  - `parse_program()` - Validates HAI...KTHXBYE structure, returns ProgramNode
   - `parse_main_body()` - Handles optional WAZZUP block and statements
-  - `parse_statement()` - Dispatches to specific statement parsers
-  - `parse_expression()` - Validates expressions with proper operator syntax
-  - Control flow parsers: `parse_conditional()`, `parse_switch()`, `parse_loop()`
-  - Function parsers: `parse_function_definition()`, `parse_function_call()`
+  - `parse_statement()` - Dispatches to specific statement parsers, returns statement nodes
+  - `parse_expression()` - Validates expressions with proper operator syntax, returns expression nodes
+  - Control flow parsers: `parse_conditional()`, `parse_switch()`, `parse_loop()` - return control flow nodes
+  - Function parsers: `parse_function_definition()`, `parse_function_call()` - return function nodes
 
 **Custom Exception:**
 - **SyntaxError**: Custom exception with line number tracking for detailed error reporting
+
+**AST Construction Features:**
+- Complete tree structure representing program semantics
+- All statement types create corresponding AST nodes
+- Expression parsing builds nested expression trees
+- Control flow structures maintain block hierarchies
+- Functions preserve parameter and argument lists
 
 **Validation Features:**
 - Program structure (HAI/KTHXBYE)
@@ -172,9 +263,6 @@ Loop label mismatch: started with 'loop' but ended with 'wrongloop' on line 8
 Binary operator requires AN between operands on line 5
 SMOOSH must end with MKAY on line 7
 ```
-
-**Design for Future AST:**
-The parser is structured to easily add Abstract Syntax Tree (AST) construction. Each parse method can be extended to return tree nodes instead of just validating.
 
 ### `semantics/symbolizer.py`
 Implements symbol table construction and management for semantic analysis.
@@ -211,10 +299,10 @@ Implements symbol table construction and management for semantic analysis.
 - VISIBLE statement tracking (stores in IT)
 
 **Future Enhancements:**
-- Assignment statements (`<var> R <value>`)
+- AST-based semantic analysis
 - Type inference and validation
 - Scope management
-- Expression evaluation
+- Full expression evaluation
 
 ### `lexer/lol_tokens.py`
 Defines the token types, regular expression patterns, and human-readable descriptions for LOLCode lexemes.
@@ -389,35 +477,38 @@ I IZ <funcname> [YR <arg1> [AN YR <arg2> ...]] MKAY
 
 6. **Human-Readable Descriptions**: The `TOKEN_DESCRIPTIONS` dictionary maps internal token types to user-friendly names for GUI display, maintaining separation between internal representation and user interface.
 
-### Syntax Analysis Details
+### Syntax Analysis & AST Construction Details
 
 1. **Recursive-Descent Parsing**: The parser uses recursive-descent techniques without any parser generators, as required by project specifications.
 
-2. **Token Stream Management**:
+2. **AST Construction**: Each parsing method constructs and returns appropriate AST nodes:
+   - Terminal nodes (literals, variables) are leaf nodes
+   - Operators create nodes with child expressions
+   - Statements create nodes with nested statement lists
+   - The entire program is represented as a tree structure
+
+3. **Token Stream Management**:
    - Linebreak tokens are filtered out for cleaner parsing
    - Current position tracked with lookahead capability
    - Token consumption with type validation
 
-3. **Error Reporting**:
+4. **Error Reporting**:
    - All syntax errors include specific line numbers
    - Clear messages indicate what was expected vs. what was found
    - Examples: "Expected variable identifier after 'I HAS A' on line 12"
 
-4. **Expression Parsing**:
+5. **Expression Parsing**:
    - Validates operator arity (binary operators require exactly 2 operands)
    - Ensures proper use of `AN` separator between operands
    - Checks for `MKAY` terminators in infinite arity operations
    - Handles nested expressions recursively
+   - Builds expression trees for evaluation
 
-5. **Control Flow Validation**:
+6. **Control Flow Validation**:
    - Ensures proper block structure (O RLY...OIC, WTF...OIC)
    - Validates loop label matching
    - Checks required clauses (YA RLY after O RLY?)
-
-6. **Future AST Construction**:
-   - Parser designed to easily extend with AST node creation
-   - Each parse method can be modified to return tree nodes
-   - Current structure provides foundation for interpretation phase
+   - Maintains block hierarchies in AST nodes
 
 ### Semantic Analysis Details
 
@@ -437,6 +528,7 @@ I IZ <funcname> [YR <arg1> [AN YR <arg2> ...]] MKAY
    - String delimiters are filtered out during processing
 
 4. **Current Limitations**:
+   - Token-based analysis (will migrate to AST-based)
    - No type checking or inference yet
    - Assignment statements (`R`) not yet implemented
    - No scope management (global scope only)
@@ -449,7 +541,7 @@ The GUI integrates all three analysis phases:
 2. Importing `tokenize_program()` from lexer package
 3. Importing `Parser` and `SyntaxError` from parser package
 4. Importing `symbolize()` from semantics package
-5. Running complete pipeline: Lexer → Parser → Semantics
+5. Running complete pipeline: Lexer → Parser (with AST) → Semantics
 6. Displaying results and errors in console output
 7. Filtering out LINEBREAK tokens for cleaner display
 
@@ -469,7 +561,7 @@ Test cases are organized in the `test_cases/` directory, covering:
 2. Open a test file from `test_cases/`
 3. Click EXECUTE
 4. View tokens in the Lexemes table with descriptive classifications
-5. Check console for syntax validation results
+5. Check console for syntax validation results and AST construction
 
 ### Testing Individual Components
 
@@ -478,7 +570,7 @@ Test cases are organized in the `test_cases/` directory, covering:
 python lexer/lexer.py test_cases/01_variables.lol
 ```
 
-**Parser (Python):**
+**Parser with AST (Python):**
 ```python
 from lexer import tokenize_program
 from parser import Parser, SyntaxError as LOLSyntaxError
@@ -492,8 +584,15 @@ tokens = tokenize_program(code)
 
 try:
     parser = Parser(tokens)
-    parser.parse()
+    ast = parser.parse()  # Returns ProgramNode
     print("✅ Syntax is valid!")
+    print(f"Program version: {ast.version}")
+    print(f"Number of statements: {len(ast.statements)}")
+    
+    # Examine first statement
+    first_stmt = ast.statements[0]
+    print(f"First statement type: {type(first_stmt).__name__}")
+    
 except LOLSyntaxError as e:
     print(f"❌ {e}")
 ```
@@ -577,34 +676,39 @@ Error: `Binary operator requires AN between operands on line 2`
 ### Phase 3: Complete Semantic Analysis - IN PROGRESS
 - ✅ Symbol table construction
 - ✅ Variable declaration tracking
+- ⬜ Migration to AST-based semantic analysis
 - ⬜ Assignment statement handling (`<var> R <value>`)
 - ⬜ Type checking and inference
 - ⬜ Variable scope management
 - ⬜ Full expression evaluation
 - ⬜ Runtime error detection
 
-### Phase 4: Abstract Syntax Tree (AST) - PLANNED
-- Create AST node classes (ProgramNode, StatementNode, ExpressionNode, etc.)
-- Modify parser to construct tree during validation
-- Build tree structure representing program semantics
-- Use AST for interpretation phase
+### Phase 4: AST-Based Interpreter - NEXT
+- ✅ AST node classes complete
+- ✅ Parser constructs AST during validation
+- ⬜ AST traversal and evaluation
+- ⬜ Expression evaluation with type coercion
+- ⬜ Control flow execution (conditionals, loops)
+- ⬜ Function call execution
+- ⬜ I/O operations (VISIBLE, GIMMEH)
 
-### Phase 5: Interpreter/Executor - PLANNED
-- Implement AST traversal and execution
-- Handle I/O operations (VISIBLE, GIMMEH)
-- Expression evaluation with type coercion
-- Control flow execution
-- Function calls and returns
-- Connect to GUI console for output
+### Phase 5: Complete Interpreter Implementation
+- ⬜ Runtime environment with variable storage
+- ⬜ Type system and automatic conversions
+- ⬜ Function call stack management
+- ⬜ Loop and control flow execution
+- ⬜ Error handling and runtime validation
+- ⬜ Connect to GUI console for interactive I/O
 
-### Phase 6: Complete GUI Implementation
+### Phase 6: Final GUI Integration
 - ✅ File explorer for loading .lol files
 - ✅ Text editor for code viewing/editing
 - ✅ Token list display with human-readable descriptions
 - ✅ Symbol table display
 - ✅ Console output for errors and messages
-- ⬜ Interactive console for GIMMEH input
-- ⬜ Program execution with runtime I/O
+- ⬜ Interactive console for GIMMEH input during execution
+- ⬜ Step-by-step execution debugging
+- ⬜ AST visualization (optional)
 
 ## Project Requirements
 
@@ -618,17 +722,19 @@ Error: `Binary operator requires AN between operands on line 2`
 When continuing work on this codebase:
 
 1. **Lexer is complete** ✅ - Fully functional and tested
-2. **Parser is complete** ✅ - Validates all LOLCode syntax
-3. **Semantic module started** 🔄 - Symbol table construction implemented
-4. **GUI framework ready** - All phases integrated with console output
-5. **Follow the pattern ordering** in `lol_tokens.py` - order matters!
-6. **Context is key** - The `classify_identifier` function shows how to use previous tokens
-7. **Test incrementally** - Use test cases to verify each feature
-8. **Maintain token structure** - (lexeme, TokenType, line_number) tuples throughout
-9. **Refer to specifications** - The project specs PDF contains authoritative rules
-10. **Display layer separation** - `TokenType` for internal use; `TOKEN_DESCRIPTIONS` for GUI
-11. **Module organization** - Keep lexer, parser, and semantics in separate packages
-12. **Error handling** - Always provide line numbers and clear messages
+2. **Parser is complete** ✅ - Validates all LOLCode syntax and builds AST
+3. **AST is complete** ✅ - All node types defined and constructed
+4. **Semantic module started** 📄 - Symbol table construction implemented (needs AST migration)
+5. **GUI framework ready** - All phases integrated with console output
+6. **Follow the pattern ordering** in `lol_tokens.py` - order matters!
+7. **Context is key** - The `classify_identifier` function shows how to use previous tokens
+8. **Test incrementally** - Use test cases to verify each feature
+9. **Maintain token structure** - (lexeme, TokenType, line_number) tuples throughout
+10. **Refer to specifications** - The project specs PDF contains authoritative rules
+11. **Display layer separation** - `TokenType` for internal use; `TOKEN_DESCRIPTIONS` for GUI
+12. **Module organization** - Keep lexer, parser, and semantics in separate packages
+13. **Error handling** - Always provide line numbers and clear messages
+14. **AST structure** - Tree represents program semantics, ready for interpretation
 
 ### Common Issues to Watch
 
@@ -640,42 +746,120 @@ When continuing work on this codebase:
 - Token descriptions are purely for display - internal TokenType unchanged
 - Import paths relative to project root (e.g., `from parser import Parser`)
 - Custom SyntaxError imported as `LOLSyntaxError` to avoid conflicts
+- AST nodes should be traversed, not tokens, for semantic analysis
 
-### AST Implementation Guide (Future)
+### AST Traversal Guide (For Interpreter Implementation)
 
-When ready to add Abstract Syntax Tree construction:
+When implementing the interpreter using the AST:
 
-1. **Create node classes** in `parser/ast_nodes.py`:
+1. **Start with the root** (ProgramNode):
 ```python
-class ASTNode:
-    pass
+def execute_program(ast):
+    for statement in ast.statements:
+        execute_statement(statement)
+```
 
-class ProgramNode(ASTNode):
+2. **Dispatch based on node type**:
+```python
+def execute_statement(node):
+    if isinstance(node, VariableDeclNode):
+        handle_declaration(node)
+    elif isinstance(node, AssignmentNode):
+        handle_assignment(node)
+    elif isinstance(node, VisibleNode):
+        handle_output(node)
+    # ... etc
+```
+
+3. **Evaluate expressions recursively**:
+```python
+def evaluate_expression(node, symbol_table):
+    if isinstance(node, LiteralNode):
+        return convert_literal(node.value, node.literal_type)
+    elif isinstance(node, VariableNode):
+        return symbol_table.get(node.var_name, "NOOB")
+    elif isinstance(node, BinaryOpNode):
+        left = evaluate_expression(node.left, symbol_table)
+        right = evaluate_expression(node.right, symbol_table)
+        return apply_binary_op(node.operator, left, right)
+    elif isinstance(node, UnaryOpNode):
+        operand = evaluate_expression(node.operand, symbol_table)
+        return apply_unary_op(node.operator, operand)
+    # ... etc
+```
+
+4. **Handle control flow**:
+```python
+def execute_conditional(node, symbol_table):
+    # Evaluate IT variable for condition
+    condition = symbol_table.get('IT', "NOOB")
+    
+    if is_truthy(condition):
+        for stmt in node.if_block:
+            execute_statement(stmt, symbol_table)
+    else:
+        # Check elif blocks
+        for elif_clause in node.elif_blocks:
+            elif_condition = evaluate_expression(elif_clause.condition, symbol_table)
+            if is_truthy(elif_condition):
+                for stmt in elif_clause.statements:
+                    execute_statement(stmt, symbol_table)
+                return
+        # Execute else block
+        for stmt in node.else_block:
+            execute_statement(stmt, symbol_table)
+```
+
+5. **Maintain runtime state**:
+```python
+class RuntimeEnvironment:
     def __init__(self):
-        self.statements = []
-
-class BinaryOpNode(ASTNode):
-    def __init__(self, operator, left, right):
-        self.operator = operator
-        self.left = left
-        self.right = right
+        self.symbol_table = {'IT': 'NOOB'}
+        self.functions = {}
+        self.call_stack = []
+    
+    def declare_variable(self, name, value="NOOB"):
+        self.symbol_table[name] = value
+    
+    def get_variable(self, name):
+        return self.symbol_table.get(name, "NOOB")
+    
+    def set_variable(self, name, value):
+        self.symbol_table[name] = value
 ```
 
-2. **Modify parser methods** to return nodes:
-```python
-def parse_expression(self):
-    # Instead of just validating...
-    if token_type == TokenType.SUM_OF:
-        self.advance()
-        left = self.parse_expression()
-        self.expect(TokenType.AN)
-        right = self.parse_expression()
-        return BinaryOpNode('SUM_OF', left, right)  # Return AST node
-```
+## AST Node Reference
 
-3. **Use AST for interpretation** - traverse tree and execute nodes
+### Quick Node Type Guide
 
-The current parser structure makes this transition straightforward!
+**Program Structure:**
+- `ProgramNode` - Root of entire program
+
+**Statements:**
+- `VariableDeclNode` - Variable declarations
+- `AssignmentNode` - Variable assignments
+- `VisibleNode` - Output statements
+- `GimmehNode` - Input statements
+- `ConditionalNode` - If-else structures
+- `SwitchNode` - Switch-case structures
+- `LoopNode` - Loop structures
+- `FunctionDefNode` - Function definitions
+- `FunctionCallNode` - Function calls
+- `ReturnNode` - Return statements
+- `BreakNode` - Break statements
+
+**Expressions:**
+- `LiteralNode` - Literal values
+- `VariableNode` - Variable references
+- `BinaryOpNode` - Binary operations
+- `UnaryOpNode` - Unary operations
+- `InfiniteArityOpNode` - Multi-operand operations
+- `ComparisonNode` - Comparison operations
+- `TypecastNode` - Type conversions
+
+**Supporting Nodes:**
+- `ElifClauseNode` - Else-if clauses
+- `CaseNode` - Switch cases
 
 ## Dependencies
 
@@ -683,10 +867,25 @@ The current parser structure makes this transition straightforward!
 - tkinter (usually included with Python)
 - No external packages required
 
-## Contributing
+## Future Enhancements
 
-This is an academic project for CMSC 124. The implementation follows course requirements and LOLCode specifications.
+**Interpreter Phase:**
+- Runtime environment with proper variable scoping
+- Type system with automatic conversions
+- Function call stack with local scopes
+- Full control flow execution
+- I/O handling with user interaction
 
-## License
+**GUI Improvements:**
+- Syntax highlighting in text editor
+- AST tree visualization
+- Step-by-step execution debugger
+- Breakpoint support
+- Variable watch window
 
-Educational use for CMSC 124 coursework at the University of the Philippines Los Baños.
+**Advanced Features:**
+- Error recovery during parsing
+- Better error messages with suggestions
+- Code formatting/beautification
+- LOLCode-to-Python transpiler
+- Performance optimizations
