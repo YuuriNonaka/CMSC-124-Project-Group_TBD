@@ -3,9 +3,10 @@ import operator
 
 def get_value(tokens, symbol_table): #helper function: converts expression into a single string value ("noot noot" var => noot noot 12)
     
-    if not tokens:
+    if not tokens: 
         return "NOOB"
     
+    # this block simply gets the actualy value of the token
     if len(tokens) == 1:
         lexeme, token_type, line_num = tokens[0]
 
@@ -36,12 +37,14 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
         else:
             return lexeme
 
+    # yarn hadnling
     if ((len(tokens) == 3) and
         (tokens[0][1] == TokenType.STRING_DELIM) and
         (tokens[1][1] == TokenType.YARN) and
         (tokens[2][1] == TokenType.STRING_DELIM)):
         return tokens[1][0]
     
+    # operators
     operator_lexeme, operator_type, operator_num = tokens[0]
     operations = {
         TokenType.SUM_OF: operator.add,
@@ -55,6 +58,7 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
 
     if operator_type in operations:
         AN_index = -1
+        # reverse is for nested expressions
         for i, (lexeme, token_type, line_num) in enumerate(reversed(tokens)):
             if token_type == TokenType.AN:
                 AN_index = len(tokens) - 1 - i
@@ -75,8 +79,10 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
         except Exception:
             return ""
     
+    # string concatenation
     if operator_type == TokenType.SMOOSH:
         AN_index = -1
+        # reverse is for nested expressions
         for i, (lexeme, token_type, line_num) in enumerate(reversed(tokens)):
             if token_type == TokenType.AN:
                 AN_index = len(tokens) - 1 - i
