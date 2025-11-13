@@ -1,6 +1,12 @@
 from lexer.lol_tokens import TokenType
 import operator
 
+def bool_convert(token):
+    if token == "NOOB" or token == "" or token == 0 or token == "FAIL":
+        return False
+    else:
+        return True
+
 def get_value(tokens, symbol_table): #helper function: converts expression into a single string value ("noot noot" var => noot noot 12)
     
     if not tokens: 
@@ -36,13 +42,6 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
                     return str(value)
         else:
             return lexeme
-
-    # yarn hadnling
-    if ((len(tokens) == 3) and
-        (tokens[0][1] == TokenType.STRING_DELIM) and
-        (tokens[1][1] == TokenType.YARN) and
-        (tokens[2][1] == TokenType.STRING_DELIM)):
-        return tokens[1][0]
     
     # operators
     operator_lexeme, operator_type, operator_num = tokens[0]
@@ -54,7 +53,25 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
         TokenType.MOD_OF: operator.mod,
         TokenType.BIGGR_OF: max,
         TokenType.SMALLR_OF: min,
+        TokenType.BOTH_OF: lambda first_op, second_op: bool_convert(first_op) and bool_convert(second_op),
+        TokenType.EITHER_OF: lambda first_op, second_op: bool_convert(first_op) or bool_convert(second_op),
+        TokenType.WON_OF: lambda first_op, second_op: bool_convert(first_op) ^ bool_convert(second_op),
+        TokenType.BOTH_SAEM: operator.eq,
+        TokenType.DIFFRINT: operator.ne,
     }
+
+    # yarn hadnling
+    if ((len(tokens) == 3) and
+        (tokens[0][1] == TokenType.STRING_DELIM) and
+        (tokens[1][1] == TokenType.YARN) and
+        (tokens[2][1] == TokenType.STRING_DELIM)):
+        return tokens[1][0]
+    
+    # not 
+    if operator_type == TokenType.NOT:
+        operands = tokens[1:]
+        values = get_value(operands, symbol_table)
+        return (not bool_convert(values))
 
     if operator_type in operations:
         AN_index = -1
@@ -64,7 +81,7 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
                 AN_index = len(tokens) - 1 - i
                 break
         
-        if AN_index == -1:
+        if AN_index == -1: # AN not found
             return "NOOB"
         
         first_op = tokens[1:AN_index]
@@ -75,9 +92,31 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
 
         try:
             operate = operations[operator_type]
-            return operate(value1, value2)
+
+            # bool to 1 (win) or 0 (fail)
+            if value1 == "WIN" or value1 == True:
+                value1 = 1
+            if value2 == "WIN" or value2 == True:
+                value2 = 1
+            if value1 == "FAIL" or value1 == False:
+                value1 = 0
+            if value2 == "FAIL" or value2 == False:
+                value2 = 0         
+            if operator_type == TokenType.BOTH_SAEM or operator_type == TokenType.DIFFRINT:
+                value1 = str(value1)
+                value2 = str(value2)
+
+            result =  operate(value1, value2)
+            if isinstance(result, bool):
+                if result: #if true
+                    return "WIN"
+                else:
+                    return "FAIL"
+            
+            return result
+                
         except Exception:
-            return ""
+            return "NOOB"
     
     # string concatenation
     if operator_type == TokenType.SMOOSH:
@@ -88,7 +127,7 @@ def get_value(tokens, symbol_table): #helper function: converts expression into 
                 AN_index = len(tokens) - 1 - i
                 break
 
-        if AN_index == -1:
+        if AN_index == -1: # AN not found
             return "NOOB"
     
         first_op = tokens[1:AN_index]
