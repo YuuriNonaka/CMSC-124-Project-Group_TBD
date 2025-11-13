@@ -1,4 +1,5 @@
 from lexer.lol_tokens import TokenType
+from parser.ast_nodes import *
 
 
 class SyntaxError(Exception): #custom error handling with line number tracking
@@ -58,7 +59,7 @@ class Parser: #uses recursive descent
         if not self.tokens:
             raise SyntaxError("Empty program. LOLCode programs must start with HAI.")
         
-        self.parse_program()
+        program_node = self.parse_program() #constructs ast for entire program
         
         #ensures no extra tokens remain after the program ends
         if self.current_token:
@@ -67,38 +68,57 @@ class Parser: #uses recursive descent
                 f"Unexpected code after KTHXBYE on line {line_num}. "
                 f"Program must end with KTHXBYE."
             )
+        
+        return program_node #returns complete ast
 
     def parse_program(self):
         #parses required program structure: HAI [version] [body] KTHXBYE
         self.expect(TokenType.HAI, "Program must start with HAI")
         
+        program_node = ProgramNode() #creates root ast node
+        
         #optional version number after HAI (may be omitted)
         if self.match(TokenType.NUMBAR):
+            version_token = self.current_token
+            program_node.version = version_token[0] #stores version number
             self.advance()  #moves past version number
         
         #parses the main body content
-        self.parse_main_body()
+        statements = self.parse_main_body() #gets list of statement nodes
+        program_node.statements = statements #stores statements in program node
         
         #program must end with KTHXBYE
         self.expect(TokenType.KTHXBYE, "Program must end with KTHXBYE")
+        
+        return program_node #returns complete program ast
 
     def parse_main_body(self):
         #optional variable declarations using wazzup, followed by statements
+        statements = [] #collects all statement nodes
+        
         if self.match(TokenType.WAZZUP):
-            self.parse_wazzup_block()
+            var_decls = self.parse_wazzup_block() #gets variable declaration nodes
+            statements.extend(var_decls) #adds declarations to statement list
         
         #parses all statements until we reach KTHXBYE
         while self.current_token and not self.match(TokenType.KTHXBYE):
-            self.parse_statement()
+            stmt = self.parse_statement() #gets statement node
+            if stmt: #only add non-none statements
+                statements.append(stmt)
+        
+        return statements #returns list of statement nodes
 
     def parse_wazzup_block(self):
         #parses variable declaration block: WAZZUP [declarations] BUHBYE
         self.expect(TokenType.WAZZUP)
         
+        declarations = [] #collects declaration nodes
+        
         #parses all variable declarations until BUHBYE marker
         while self.current_token and not self.match(TokenType.BUHBYE):
             if self.match(TokenType.I_HAS_A):
-                self.parse_variable_declaration()
+                decl_node = self.parse_variable_declaration() #gets declaration node
+                declarations.append(decl_node)
             else:
                 line_num = self.current_token[2]
                 raise SyntaxError(
@@ -107,6 +127,8 @@ class Parser: #uses recursive descent
                 )
         
         self.expect(TokenType.BUHBYE, "WAZZUP block must end with BUHBYE")
+        
+        return declarations #returns list of declaration nodes
 
     def parse_variable_declaration(self):
         #parses variable declarations: I HAS A <variable> [ITZ <initial value>]
@@ -119,65 +141,71 @@ class Parser: #uses recursive descent
                 f"Expected variable identifier after 'I HAS A' on line {line_num}"
             )
         
+        var_name = self.current_token[0] #stores variable name
         self.advance()  #move past variable name
+        
+        initial_value = None #default no initialization
         
         #optional initialization with ITZ keyword
         if self.match(TokenType.ITZ):
             self.advance()  #moves past ITZ
-            self.parse_expression()
+            initial_value = self.parse_expression() #gets initial value expression node
+        
+        return VariableDeclNode(var_name, initial_value) #returns declaration node
 
     def parse_statement(self):
         #parses one statement: output, input, assignment, conditionals, loops, functions, etc.
         #has separate functions for each type
         if not self.current_token:
-            return
+            return None
         
         token_type = self.current_token[1]
         line_num = self.current_token[2]
         
         #VISIBLE - output statement
         if token_type == TokenType.VISIBLE:
-            self.parse_visible_statement()
+            return self.parse_visible_statement() #returns visible node
         
         #GIMMEH - input statement  
         elif token_type == TokenType.GIMMEH:
-            self.parse_gimmeh_statement()
+            return self.parse_gimmeh_statement() #returns gimmeh node
         
         #Assignment: <variable> R <expression>
         elif token_type == TokenType.VARIDENT:
-            self.parse_assignment_or_expression()
+            return self.parse_assignment_or_expression() #returns assignment or variable node
         
         #O RLY? - if/else conditional
         elif token_type == TokenType.O_RLY:
-            self.parse_conditional()
+            return self.parse_conditional() #returns conditional node
         
         #WTF? - switch/case statement
         elif token_type == TokenType.WTF:
-            self.parse_switch()
+            return self.parse_switch() #returns switch node
         
         #IM IN YR - loop construct
         elif token_type == TokenType.IM_IN_YR:
-            self.parse_loop()
+            return self.parse_loop() #returns loop node
         
         #HOW IZ I - function definition
         elif token_type == TokenType.HOW_IZ_I:
-            self.parse_function_definition()
+            return self.parse_function_definition() #returns function definition node
         
         #I IZ - function call
         elif token_type == TokenType.I_IZ:
-            self.parse_function_call()
+            return self.parse_function_call() #returns function call node
         
         #FOUND YR - return from function
         elif token_type == TokenType.FOUND_YR:
-            self.parse_return_statement()
+            return self.parse_return_statement() #returns return node
         
         #GTFO - break out of loop or switch
         elif token_type == TokenType.GTFO:
             self.advance()  #moves past GTFO token
+            return BreakNode() #returns break node
         
         #expression that evaluates to IT variable
         elif self.is_expression_start():
-            self.parse_expression()
+            return self.parse_expression() #returns expression node
         
         else:
             raise SyntaxError(
@@ -194,52 +222,73 @@ class Parser: #uses recursive descent
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"VISIBLE requires at least one expression on line {line_num}")
         
+        expressions = [] #collects expression nodes to output
+        
         #parses first expression
-        self.parse_expression()
+        expr = self.parse_expression() #gets expression node
+        expressions.append(expr)
         
         #parses additional expressions on the same line (space-separated)
         while self.current_token and self.is_expression_start() and self.current_token[1] != TokenType.LINEBREAK:
-            self.parse_expression()
+            expr = self.parse_expression() #gets expression node
+            expressions.append(expr)
         
         #consumes the line break at the end of the statement if present
         if self.current_token and self.current_token[1] == TokenType.LINEBREAK:
             self.advance()
+        
+        return VisibleNode(expressions) #returns visible node with expressions
 
     def parse_gimmeh_statement(self):
         #parses GIMMEH statement: read input into a variable
         self.expect(TokenType.GIMMEH)
-        self.expect(TokenType.VARIDENT, "GIMMEH requires a variable identifier")
+        var_token = self.expect(TokenType.VARIDENT, "GIMMEH requires a variable identifier")
+        return GimmehNode(var_token[0]) #returns gimmeh node with variable name
 
     def parse_assignment_or_expression(self):
         #parses either variable assignment (<var> R <expr>) or variable reference as expression
         var_token = self.current_token
+        var_name = var_token[0] #stores variable name
         self.advance()  #moves past variable name
         
         if self.match(TokenType.R):
             #this is an assignment: variable R expression
             self.advance()  #moves past R token
-            self.parse_expression()
-        #if no R token, this is just a variable reference (valid as standalone expression)
+            expr = self.parse_expression() #gets expression node
+            return AssignmentNode(var_name, expr) #returns assignment node
+        else:
+            #if no R token, this is just a variable reference (valid as standalone expression)
+            return VariableNode(var_name) #returns variable reference node
 
     def parse_conditional(self):
         #parses if/else conditional: O RLY? → YA RLY [MEBBE] [NO WAI] → OIC
         self.expect(TokenType.O_RLY)
+        
+        conditional_node = ConditionalNode() #creates conditional node
         
         #requires if block
         self.expect(TokenType.YA_RLY, "O RLY? must be followed by YA RLY")
         
         #parses statements until MEBBE (else if), NO WAI (else), or OIC (end)
         while self.current_token and not self.match(TokenType.MEBBE, TokenType.NO_WAI, TokenType.OIC):
-            self.parse_statement()
+            stmt = self.parse_statement() #gets statement node
+            if stmt:
+                conditional_node.if_block.append(stmt) #adds to if block
         
         #parse any else-if (MEBBE) blocks
         while self.match(TokenType.MEBBE):
             self.advance()  #moves MEBBE
-            self.parse_expression()  #parse the condition
+            condition = self.parse_expression()  #parse the condition
+            
+            elif_clause = ElifClauseNode(condition) #creates elif clause node
             
             #parses else-if block statements until next MEBBE, NO WAI, or OIC
             while self.current_token and not self.match(TokenType.MEBBE, TokenType.NO_WAI, TokenType.OIC):
-                self.parse_statement()
+                stmt = self.parse_statement() #gets statement node
+                if stmt:
+                    elif_clause.statements.append(stmt) #adds to elif block
+            
+            conditional_node.elif_blocks.append(elif_clause) #adds elif clause to conditional
         
         #parses else (NO WAI) block if present
         if self.match(TokenType.NO_WAI):
@@ -247,14 +296,20 @@ class Parser: #uses recursive descent
             
             #parses else block statements until OIC
             while self.current_token and not self.match(TokenType.OIC):
-                self.parse_statement()
+                stmt = self.parse_statement() #gets statement node
+                if stmt:
+                    conditional_node.else_block.append(stmt) #adds to else block
         
         #end of conditional
         self.expect(TokenType.OIC, "Conditional must end with OIC")
+        
+        return conditional_node #returns complete conditional node
 
     def parse_switch(self):
         #parses switch statement: WTF? → OMG cases [OMGWTF default] → OIC
         self.expect(TokenType.WTF)
+        
+        switch_node = SwitchNode() #creates switch node
         
         #must have at least one case
         if not self.match(TokenType.OMG):
@@ -270,11 +325,18 @@ class Parser: #uses recursive descent
                 line_num = self.current_token[2] if self.current_token else "EOF"
                 raise SyntaxError(f"OMG must be followed by a literal value on line {line_num}")
             
+            literal_value = self.current_token[0] #stores case value
             self.advance()  #moves past the literal value
+            
+            case_node = CaseNode(literal_value) #creates case node
             
             #parses case body statements until next OMG, OMGWTF, or OIC
             while self.current_token and not self.match(TokenType.OMG, TokenType.OMGWTF, TokenType.OIC):
-                self.parse_statement()
+                stmt = self.parse_statement() #gets statement node
+                if stmt:
+                    case_node.statements.append(stmt) #adds to case block
+            
+            switch_node.cases.append(case_node) #adds case to switch
         
         #parses default case (OMGWTF) if present
         if self.match(TokenType.OMGWTF):
@@ -282,10 +344,14 @@ class Parser: #uses recursive descent
             
             #parses default case statements until OIC
             while self.current_token and not self.match(TokenType.OIC):
-                self.parse_statement()
+                stmt = self.parse_statement() #gets statement node
+                if stmt:
+                    switch_node.default_case.append(stmt) #adds to default case
         
         #end of switch statement
         self.expect(TokenType.OIC, "Switch statement must end with OIC")
+        
+        return switch_node #returns complete switch node
 
     def parse_loop(self):
         #parses loop: IM IN YR label → UPPIN/NERFIN → YR variable → [TIL/WILE condition] → body → IM OUTTA YR label
@@ -296,7 +362,7 @@ class Parser: #uses recursive descent
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"Expected loop label after 'IM IN YR' on line {line_num}")
         
-        label_name = self.current_token[0]
+        label_name = self.current_token[0] #stores label name
         self.advance()  #moves past label
         
         #loop must specify increment type (UPPIN = increment, NERFIN = decrement)
@@ -304,22 +370,31 @@ class Parser: #uses recursive descent
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"Expected UPPIN or NERFIN after loop label on line {line_num}")
         
+        operation = self.current_token[0] #stores operation type
         self.advance()  #moves past UPPIN/NERFIN
         
         #expects YR keyword before loop variable
         self.expect(TokenType.YR, "Expected YR after UPPIN/NERFIN")
         
         #gets the loop variable to increment/decrement
-        self.expect(TokenType.VARIDENT, "Expected variable identifier after YR")
+        var_token = self.expect(TokenType.VARIDENT, "Expected variable identifier after YR")
+        var_name = var_token[0] #stores variable name
+        
+        loop_node = LoopNode(label_name, operation, var_name) #creates loop node
         
         #optional loop condition (TIL = until, WILE = while)
         if self.match(TokenType.TIL, TokenType.WILE):
+            condition_type = self.current_token[0] #stores condition type
             self.advance()  #moves past TIL/WILE
-            self.parse_expression()  # Parse the loop condition
+            condition = self.parse_expression()  # Parse the loop condition
+            loop_node.condition = condition #stores condition expression
+            loop_node.condition_type = condition_type #stores til or wile
         
         #parses loop body statements until IM OUTTA YR
         while self.current_token and not self.match(TokenType.IM_OUTTA_YR):
-            self.parse_statement()
+            stmt = self.parse_statement() #gets statement node
+            if stmt:
+                loop_node.statements.append(stmt) #adds to loop body
         
         #verifies loop ends with matching label
         self.expect(TokenType.IM_OUTTA_YR, "Loop must end with IM OUTTA YR")
@@ -328,12 +403,14 @@ class Parser: #uses recursive descent
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"Expected loop label after 'IM OUTTA YR' on line {line_num}")
         
-        end_label = self.current_token[0]
+        end_label = self.current_token[0] #stores end label
         if end_label != label_name: #checks if loop name at start and end are the same
             line_num = self.current_token[2]
             raise SyntaxError(f"Loop label mismatch: started with '{label_name}' but ended with '{end_label}' on line {line_num}")
         
         self.advance()  #moves past end label
+        
+        return loop_node #returns complete loop node
 
     def parse_function_definition(self):
         #parses function definition: HOW IZ I function_name [YR parameters] → statements → IF U SAY SO
@@ -344,29 +421,42 @@ class Parser: #uses recursive descent
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"Expected function identifier after 'HOW IZ I' on line {line_num}")
         
+        func_name = self.current_token[0] #stores function name
         self.advance()  #moves past function name
+        
+        parameters = [] #collects parameter names
         
         #parses parameters if present (YR param1 AN YR param2 ...)
         if self.match(TokenType.YR):
-            self.parse_parameter_list()
+            parameters = self.parse_parameter_list() #gets list of parameter names
+        
+        func_node = FunctionDefNode(func_name, parameters) #creates function definition node
         
         #parses function body statements until IF U SAY SO
         while self.current_token and not self.match(TokenType.IF_U_SAY_SO):
-            self.parse_statement()
+            stmt = self.parse_statement() #gets statement node
+            if stmt:
+                func_node.statements.append(stmt) #adds to function body
         
         #ends function definition
         self.expect(TokenType.IF_U_SAY_SO, "Function must end with IF U SAY SO")
+        
+        return func_node #returns complete function definition node
 
     def parse_parameter_list(self):
         #parses function parameters: YR param_name [AN YR param_name ...]
         self.expect(TokenType.YR)
-        self.expect(TokenType.VARIDENT, "Expected parameter name after YR")
+        param_token = self.expect(TokenType.VARIDENT, "Expected parameter name after YR")
+        parameters = [param_token[0]] #stores first parameter name
         
         #parses additional parameters separated by AN YR
         while self.match(TokenType.AN):
             self.advance()  #moves past AN
             self.expect(TokenType.YR, "Expected YR after AN in parameter list")
-            self.expect(TokenType.VARIDENT, "Expected parameter name after YR")
+            param_token = self.expect(TokenType.VARIDENT, "Expected parameter name after YR")
+            parameters.append(param_token[0]) #adds parameter name to list
+        
+        return parameters #returns list of parameter names
 
     def parse_function_call(self):
         #parses function call: I IZ function_name [YR arguments] MKAY
@@ -377,30 +467,40 @@ class Parser: #uses recursive descent
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"Expected function identifier after 'I IZ' on line {line_num}")
         
+        func_name = self.current_token[0] #stores function name
         self.advance()  #moves past function name
+        
+        arguments = [] #collects argument expressions
         
         #parses arguments if present (YR expr AN YR expr ...)
         if self.match(TokenType.YR):
-            self.parse_argument_list()
+            arguments = self.parse_argument_list() #gets list of argument nodes
         
         #ends function call
         self.expect(TokenType.MKAY, "Function call must end with MKAY")
+        
+        return FunctionCallNode(func_name, arguments) #returns function call node
 
     def parse_argument_list(self):
         #parses function arguments: YR expression [AN YR expression ...]
         self.expect(TokenType.YR)
-        self.parse_expression()  #parses first argument expression
+        expr = self.parse_expression()  #parses first argument expression
+        arguments = [expr] #stores first argument node
         
         #parses additional arguments separated by AN YR
         while self.match(TokenType.AN):
             self.advance()  #moves past AN
             self.expect(TokenType.YR, "Expected YR after AN in argument list")
-            self.parse_expression()  #parses next argument expression
+            expr = self.parse_expression()  #parses next argument expression
+            arguments.append(expr) #adds argument node to list
+        
+        return arguments #returns list of argument nodes
 
     def parse_return_statement(self):
         #parses return statement: FOUND YR expression
         self.expect(TokenType.FOUND_YR)
-        self.parse_expression()  #parses the return value expression
+        expr = self.parse_expression()  #parses the return value expression
+        return ReturnNode(expr) #returns return node with expression
 
     def is_expression_start(self):
         #checks if current token can begin an expression (literals, variables, operators, etc.)
@@ -442,15 +542,18 @@ class Parser: #uses recursive descent
         #simple literals: numbers, strings, booleans, null
         if token_type in (TokenType.NUMBR, TokenType.NUMBAR, TokenType.YARN,
                         TokenType.TROOF, TokenType.NOOB):
+            value = self.current_token[0] #stores literal value
             self.advance()
-            return
+            return LiteralNode(value, token_type) #returns literal node
         
         #string with quotes: "content"
         if token_type == TokenType.STRING_DELIM:
             self.advance()  #moves past opening quote
+            string_parts = [] #collects string content
             #parses string content (YARN tokens between quotes)
             while self.current_token and self.current_token[1] != TokenType.STRING_DELIM:
                 if self.current_token[1] == TokenType.YARN:
+                    string_parts.append(self.current_token[0]) #adds content
                     self.advance()
                 else:
                     break
@@ -459,65 +562,74 @@ class Parser: #uses recursive descent
                 line_num = self.current_token[2] if self.current_token else "EOF"
                 raise SyntaxError(f"Unterminated string literal on line {line_num}")
             self.advance()  #move past closing quote
-            return
+            string_value = ' '.join(string_parts) #combines string content
+            return LiteralNode(string_value, TokenType.YARN) #returns string literal node
         
         #variable reference
         if token_type == TokenType.VARIDENT:
+            var_name = self.current_token[0] #stores variable name
             self.advance()
-            return
+            return VariableNode(var_name) #returns variable node
         
         #math operations: SUM OF expr AN expr
         if token_type in (TokenType.SUM_OF, TokenType.DIFF_OF, TokenType.PRODUKT_OF,
                         TokenType.QUOSHUNT_OF, TokenType.MOD_OF,
                         TokenType.BIGGR_OF, TokenType.SMALLR_OF):
+            operator = self.current_token[0] #stores operator
             self.advance()  #moves past operator
-            self.parse_expression()  #parses first operand
+            left = self.parse_expression()  #parses first operand
             self.expect(TokenType.AN, "Binary operator requires AN between operands")
-            self.parse_expression()  #parses second operand
-            return
+            right = self.parse_expression()  #parses second operand
+            return BinaryOpNode(operator, left, right) #returns binary operation node
         
         #binary boolean operations: BOTH OF expr AN expr
         if token_type in (TokenType.BOTH_OF, TokenType.EITHER_OF, TokenType.WON_OF):
+            operator = self.current_token[0] #stores operator
             self.advance()  #moves past operator
-            self.parse_expression()  #parses first operand
+            left = self.parse_expression()  #parses first operand
             self.expect(TokenType.AN, "Binary operator requires AN between operands")
-            self.parse_expression()  #parses second operand
-            return
+            right = self.parse_expression()  #parses second operand
+            return BinaryOpNode(operator, left, right) #returns binary operation node
         
         #NOT operation: NOT expr
         if token_type == TokenType.NOT:
+            operator = self.current_token[0] #stores operator
             self.advance()  #moves past NOT
-            self.parse_expression()  #parses operand
-            return
+            operand = self.parse_expression()  #parses operand
+            return UnaryOpNode(operator, operand) #returns unary operation node
         
         #multi-argument operations: ALL OF expr AN expr AN expr ... MKAY
         if token_type in (TokenType.ALL_OF, TokenType.ANY_OF, TokenType.SMOOSH):
+            operator = self.current_token[0] #stores operator
             self.advance()  #moves past operator
             
+            operands = [] #collects operands
+            
             #parses at least one operand
-            self.parse_expression()
+            operands.append(self.parse_expression()) #adds first operand
             
             #parses additional operands separated by AN
             while self.match(TokenType.AN):
                 self.advance()  #moves past AN
-                self.parse_expression()
+                operands.append(self.parse_expression()) #adds operand
             
             #ends multi-argument operation with MKAY
             self.expect(TokenType.MKAY, f"{token_type.value} must end with MKAY")
-            return
+            return InfiniteArityOpNode(operator, operands) #returns infinite arity operation node
         
         #comparison operations: BOTH SAEM expr AN expr
         if token_type in (TokenType.BOTH_SAEM, TokenType.DIFFRINT):
+            operator = self.current_token[0] #stores operator
             self.advance()  #moves past operator
-            self.parse_expression()  #parses first operand
+            left = self.parse_expression()  #parses first operand
             self.expect(TokenType.AN, "Comparison operator requires AN between operands")
-            self.parse_expression()  #parses second operand
-            return
+            right = self.parse_expression()  #parses second operand
+            return ComparisonNode(operator, left, right) #returns comparison node
         
         #type casting: MAEK expression [A] type_keyword
         if token_type == TokenType.MAEK:
             self.advance()  #moves past MAEK
-            self.parse_expression()  #parses expression to cast
+            expr = self.parse_expression()  #parses expression to cast
             
             #optional A keyword before type
             if self.match(TokenType.A):
@@ -529,13 +641,13 @@ class Parser: #uses recursive descent
                 line_num = self.current_token[2] if self.current_token else "EOF"
                 raise SyntaxError(f"Expected type keyword after MAEK on line {line_num}")
             
+            target_type = self.current_token[0] #stores target type
             self.advance()  #moves past type keyword
-            return
+            return TypecastNode(expr, target_type) #returns typecast node
         
         #function call within expression
         if token_type == TokenType.I_IZ:
-            self.parse_function_call()
-            return
+            return self.parse_function_call() #returns function call node
         
         #invalid expression start, prints error message
         line_num = self.current_token[2]
@@ -545,5 +657,5 @@ class Parser: #uses recursive descent
 
 def parse_tokens(tokens): #function to simplify use in gui code
     parser = Parser(tokens)
-    parser.parse()
-    return True
+    ast = parser.parse() #gets ast instead of just true
+    return ast #returns ast for potential use
