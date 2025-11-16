@@ -7,9 +7,11 @@ class InterpreterRuntimeError(Exception):
     pass
 
 class BreakNode(Exception):
-    pass
+    # GTFO / break statement
+    pass 
 
 class ReturnNode(Exception):
+    # FOUND YR / return statement
     def __init__(self, value):
         self.value = value
 
@@ -84,7 +86,7 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
     elif isinstance(node, VisibleNode): # VISIBLE
         outputs = []
         last_value = "NOOB"
-        for expression in node.expressions:
+        for expression in node.expressions: # loops for multiple arguments
             last_value = evaluate_expression(expression, symbol_table, function_table, gui_print, gui_input)
             outputs.append(lol_to_str(last_value))
 
@@ -96,7 +98,7 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
         if node.var_name not in symbol_table:
             pass # variable not declared
 
-        user_input = gui_input()
+        user_input = gui_input() # FOR TESTING PURPOSES ONLY. INPUTS ARE DONE USING A DIALOGUE BOX
         if user_input is None:
             user_input = "NOOB" #default value
         symbol_table[node.var_name] = user_input
@@ -104,29 +106,29 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
     elif isinstance(node, ConditionalNode):
         conditional_value = symbol_table.get("IT", "NOOB")
 
-        if bool_convert(conditional_value):
+        if bool_convert(conditional_value): # YA RLY
             for statement in node.if_block:
                 execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
         
-        else:
+        else: # MEBBE
             executed_else_if = False
             for else_if_clause in node.elif_blocks:
                 else_if_value = evaluate_expression(else_if_clause.condition, symbol_table, function_table, gui_print, gui_input)
-                if bool_convert(else_if_value):
-                    for statement in else_if_clause.statements:
+                if bool_convert(else_if_value): # MEBBE conditions
+                    for statement in else_if_clause.statements: #execution
                         execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
                     executed_else_if = True
                     break
             
-            if not executed_else_if:
+            if not executed_else_if: # NO WAI
                 for statement in node.else_block:
                     execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
     
-    elif isinstance(node, SwitchNode):
+    elif isinstance(node, SwitchNode): # WTF
         switch_value = lol_to_str(symbol_table.get("IT", "NOOB"))
         executed_case = False
 
-        try:
+        try: # check all cases
             for case in node.cases:
                 if lol_to_str(case.literal_value) == switch_value:
                     for statement  in case.statements:
@@ -134,18 +136,19 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
                     executed_case = True
                     break
             
-            if not executed_case:
+            if not executed_case: # acts as the default case
                 for statement in node.default_case:
                     execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
         except BreakNode:
             pass
 
-    elif isinstance(node, LoopNode):
+    elif isinstance(node, LoopNode): # loop / IM IN YR
         if node.var_name not in symbol_table:
             pass
 
-        try:
+        try: # loops until break is found (GTFO)
             while True:
+                # loop condition
                 if node.condition:
                     conditional_value = evaluate_expression(node.condition, symbol_table, function_table, gui_print, gui_input)
                     if node.condition_type == "WILE":
@@ -155,9 +158,11 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
                         if bool_convert(conditional_value):
                             break
                 
+                # loop execution
                 for statement in node.statements:
                     execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
 
+                # loop variable update
                 current_value = lol_to_num(symbol_table[node.var_name])
                 if node.operation == "UPPIN":
                     symbol_table[node.var_name] = current_value + 1
@@ -239,7 +244,7 @@ def evaluate_expression(node, symbol_table, function_table, gui_print, gui_input
             result = (left_op != right_op)
         return format_result(result)
     
-    elif isinstance(node, UnaryOpNode):
+    elif isinstance(node, UnaryOpNode): # NOT
         value = evaluate_expression(node.operand, symbol_table, function_table, gui_print, gui_input)
         result = not bool_convert(value)
         return format_result(result)
@@ -247,28 +252,30 @@ def evaluate_expression(node, symbol_table, function_table, gui_print, gui_input
     elif isinstance(node, InfiniteArityOpNode):
         operands = [evaluate_expression(op, symbol_table, function_table, gui_print, gui_input) for op in node.operands]
 
-        if node.operator == "SMOOSH":
+        if node.operator == "SMOOSH": # concat
             return "".join([lol_to_str(op) for op in operands])
         
-        if node.operator == "ALL OF":
+        if node.operator == "ALL OF": # and
             result = all(bool_convert(op) for op in operands)
             return format_result(result)
 
-        if node.operator == "ANY OF":
+        if node.operator == "ANY OF": # or
             result = any(bool_convert(op) for op in operands)
             return format_result(result)
         
-    elif isinstance(node, FunctionCallNode):
+    elif isinstance(node, FunctionCallNode): # I IZ
         function_definition = function_table.get(node.func_name)
         if not function_definition or len(node.arguments) != len(function_definition.parameters):
-            pass
+            pass # function not defined or other errors
         
+        # evaluate argument in the top level scope
         argument_values = [evaluate_expression(argument, symbol_table, function_table, gui_print, gui_input) for argument in node.arguments]
 
         local_symbtable = {"IT": symbol_table.get("IT", "NOOB")} # define its own symbol table
         for parameters, argument_val in zip(function_definition.parameters, argument_values):
             local_symbtable[parameters] = argument_val
 
+        # execution
         try:
             for statement in function_definition.statements:
                 execute_statement(statement, local_symbtable, function_table, gui_print, gui_input)
@@ -277,7 +284,7 @@ def evaluate_expression(node, symbol_table, function_table, gui_print, gui_input
     
         return "NOOB"
 
-    elif isinstance(node, TypecastNode):
+    elif isinstance(node, TypecastNode): # MAEK
         value = evaluate_expression(node.expression, symbol_table, function_table, gui_print, gui_input)
         target = node.target_type
 
