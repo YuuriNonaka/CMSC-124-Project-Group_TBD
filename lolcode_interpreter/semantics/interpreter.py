@@ -38,14 +38,16 @@ def format_result(value):
     return value
 
 def interpret(node, gui_print, gui_input):
-    symbol_table = {'IT': 'NOOB'}
+    symbol_table = {'IT': 'NOOB'} # stores variables
+ 
+    function_table = {} # all functions wil be placed here
 
-    function_table = {}
-
+    # stores all the functions
     for statement in node.statements:
         if isinstance(statement, FunctionDefNode):
             function_table[statement.func_name] = statement
     
+    #execute statements
     for statement in node.statements:
         if not isinstance(statement, FunctionDefNode):
             execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
@@ -56,7 +58,7 @@ def interpret(node, gui_print, gui_input):
 # the statement passed as the node will be performed
 def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
     
-    if isinstance(node, VariableDeclNode):
+    if isinstance(node, VariableDeclNode): # I HAS A
         value = "NOOB" # default value for variables without values
         if node.initial_value:
             value = evaluate_expression(node.initial_value, symbol_table, function_table, gui_print, gui_input)
@@ -69,7 +71,7 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
         value = evaluate_expression(node.expression, symbol_table, function_table, gui_print, gui_input)
         symbol_table[node.var_name] = value
     
-    elif isinstance(node, VisibleNode):
+    elif isinstance(node, VisibleNode): # VISIBLE
         outputs = []
         last_value = "NOOB"
         for expression in node.expressions:
@@ -77,12 +79,12 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
             outputs.append(lol_to_str(last_value))
 
         output_string = "".join(outputs)
-        gui_print(output_string + "\n")
+        gui_print(output_string + "\n") # for testing
         symbol_table["IT"] = last_value    
 
-    elif isinstance(node, GimmehNode):
+    elif isinstance(node, GimmehNode): # GIMMEH
         if node.var_name not in symbol_table:
-            pass
+            pass # variable not declared
 
         user_input = gui_input()
         if user_input is None:
