@@ -1,53 +1,7 @@
 import operator
 from parser.ast_nodes import *
 from lexer.lol_tokens import TokenType
-from semantics import bool_convert
-
-class InterpreterRuntimeError(Exception):
-    pass
-
-class BreakNode(Exception):
-    # GTFO / break statement
-    pass 
-
-class ReturnNode(Exception):
-    # FOUND YR / return statement
-    def __init__(self, value):
-        self.value = value
-
-def lol_to_num(value):
-    if value == "WIN":
-        return 1
-    if value == "FAIL":
-        return 0
-    if value == "NOOB":
-        return 0
-    try:
-        return int(value)
-    except(ValueError, TypeError):
-        try:
-            return float(value)
-        except:
-            return 0
-
-def lol_to_str(value):
-    if value is True:
-        return "WIN"
-    if value is False:
-        return "FAIL"
-    if value is None:
-        return "NOOB"
-    if value == "NOOB":
-        return "NOOB"
-    return str(value)
-
-def format_result(value):
-    if isinstance(value, bool):
-        if value:
-            return "WIN"
-        else:
-            return "FAIL"
-    return value
+from semantics import bool_convert, lol_to_num, lol_to_str, format_result, InterpreterRuntimeError, BreakNode, ReturnNode
 
 def interpret(node, gui_print, gui_input):
     symbol_table = {'IT': 'NOOB'} # stores variables
