@@ -6,10 +6,10 @@ from semantics import bool_convert
 class InterpreterRuntimeError(Exception):
     pass
 
-class BreakSignal(Exception):
+class BreakNode(Exception):
     pass
 
-class ReturnSignal(Exception):
+class ReturnNode(Exception):
     def __init__(self, value):
         self.value = value
 
@@ -137,7 +137,7 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
             if not executed_case:
                 for statement in node.default_case:
                     execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
-        except BreakSignal:
+        except BreakNode:
             pass
 
     elif isinstance(node, LoopNode):
@@ -163,15 +163,15 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
                     symbol_table[node.var_name] = current_value + 1
                 elif node.operation == "NERFIN":
                     symbol_table[node.var_name] = current_value - 1
-        except BreakSignal:
+        except BreakNode:
             pass
     
     elif isinstance(node, BreakNode):
-        raise BreakSignal()
+        raise BreakNode()
 
     elif isinstance(node, ReturnNode):
         return_value = evaluate_expression(node.expression, symbol_table, function_table, gui_print, gui_input)
-        raise ReturnSignal(return_value)
+        raise ReturnNode(return_value)
     
     elif isinstance(node, FunctionCallNode):
         result = evaluate_expression(node, symbol_table, function_table, gui_print, gui_input)
@@ -272,7 +272,7 @@ def evaluate_expression(node, symbol_table, function_table, gui_print, gui_input
         try:
             for statement in function_definition.statements:
                 execute_statement(statement, local_symbtable, function_table, gui_print, gui_input)
-        except ReturnSignal as ret:
+        except ReturnNode as ret:
             return ret.value
     
         return "NOOB"
@@ -286,7 +286,7 @@ def evaluate_expression(node, symbol_table, function_table, gui_print, gui_input
         elif target == "NUMBAR":
             return float(lol_to_num(value))
         elif target == "YARN":
-            return lol_to_str(val)
+            return lol_to_str(value)
         elif target == "TROOF":
             if bool_convert(value):
                 return "WIN"
