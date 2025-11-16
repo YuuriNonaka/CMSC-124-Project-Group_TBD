@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import os, sys
 
 # import modules (tokenizer + symbolizer)
@@ -9,7 +9,8 @@ sys.path.insert(0, script_dir)  # add script directory
 try:
     from lexer import tokenize_program, TokenType  # tokenizer and token types
     from lexer.lol_tokens import TOKEN_DESCRIPTIONS  #  token descriptions
-    from semantics import symbolize
+    # from semantics import symbolize
+    from semantics import interpret, lol_to_str
     from parser import Parser, SyntaxError as LOLSyntaxError 
 except ImportError as e:
     print("import error:", e)  
@@ -245,12 +246,18 @@ class LOLCodeInterpreterGUI:
             
             #syntax analysis
             parser = Parser(self.tokens)
-            parser.parse()  #raises LOLSyntaxError if invalid
+            ast = parser.parse()  #raises LOLSyntaxError if invalid
             
             #semantic analysis
-            symbol_table = symbolize(self.tokens)
+            def gui_print(text):
+                self.update_console(text, newline = False)
+
+            def gui_input():
+                return simpledialog.askstring("GIMMEH", "Enter Value: ")
+           
+            symbol_table = interpret(ast, gui_print, gui_input)
             self.update_symbols(symbol_table)
-            
+                
             #success message
             self.update_console(
                 f"Syntax check passed!\n"
@@ -284,10 +291,13 @@ class LOLCodeInterpreterGUI:
     def update_symbols(self, symbols):
         for i, (name, val) in enumerate(symbols.items()):
             tag = "evenrow" if i % 2 == 0 else "oddrow"
-            self.symbol_tree.insert("", tk.END, values=(name, val), tags=(tag,))
+
+            display_value = lol_to_str(val)
+
+            self.symbol_tree.insert("", tk.END, values=(name, display_value), tags=(tag,))
 
     # console
-    def update_console(self, text):
+    def update_console(self, text, newline=True):
         self.console.config(state=tk.NORMAL)
         if not text.endswith("\n"):  # ensure newline
             text += "\n"
