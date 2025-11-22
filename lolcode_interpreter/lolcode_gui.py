@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import os, sys
+from parser import Parser, SyntaxError as LOLSyntaxError
 
 # import modules (tokenizer + symbolizer)
 script_dir = os.path.dirname(os.path.abspath(__file__))  # current script directory
@@ -9,7 +10,7 @@ sys.path.insert(0, script_dir)  # add script directory
 try:
     from lexer import tokenize_program, TokenType  # tokenizer and token types
     from lexer.lol_tokens import TOKEN_DESCRIPTIONS  #  token descriptions
-    from symbolizer import symbolize  
+    from semantics.symbolizer import symbolize
 except ImportError as e:
     print("import error:", e)  
     sys.exit(1)  # exit if import fails
@@ -18,8 +19,8 @@ except ImportError as e:
 class LOLCodeInterpreterGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("lolcode interpreter")  
-        self.root.geometry("1100x700")  
+        self.root.title("Lolcode Interpreter")
+        self.root.geometry("1100x700")
 
         # color 
         self.bg_color = "#1e1e1e"     # main background
