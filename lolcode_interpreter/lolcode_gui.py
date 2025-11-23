@@ -78,12 +78,19 @@ class LOLCodeInterpreterGUI:
         main_paned = tk.PanedWindow(main_container, orient=tk.HORIZONTAL, sashwidth=3, bg="#34495e")
         main_paned.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        # right placeholder
+        # right side (editor and console)
         right_frame = tk.Frame(main_paned, bg=self.editor_bg)
         main_paned.add(right_frame)
-        right_label = tk.Label(right_frame, text="Editor & Console", 
-                            bg=self.editor_bg, fg="white", font=("Arial", 14))
-        right_label.pack(expand=True)
+
+        # vertical paned window for editor and console
+        vertical_paned = tk.PanedWindow(right_frame, orient=tk.VERTICAL, sashwidth=3, bg="#34495e")
+        vertical_paned.pack(fill=tk.BOTH, expand=True)
+
+        # editor section
+        self.create_editor_section(vertical_paned)
+
+        # console section
+        self.create_console_section(vertical_paned)
 
     def create_header(self):
         header = tk.Frame(self.root, bg=self.header_bg, height=60)
@@ -290,6 +297,22 @@ class LOLCodeInterpreterGUI:
         tree.tag_configure("evenrow", background="white")
         
         return tree
+    
+    def create_editor_section(self, parent):
+        editor_frame = tk.Frame(parent, bg=self.editor_bg)
+        parent.add(editor_frame, height=500)
+        
+        label = tk.Label(editor_frame, text="Editor Section", 
+                        bg=self.editor_bg, fg="white", font=("Arial", 14))
+        label.pack(expand=True)
+
+    def create_console_section(self, parent):
+        console_frame = tk.Frame(parent, bg=self.console_bg)
+        parent.add(console_frame, height=200)
+        
+        label = tk.Label(console_frame, text="Console Section", 
+                        bg=self.console_bg, fg=self.console_text, font=("Arial", 14))
+        label.pack(expand=True)
 
 if __name__ == "__main__":
     root = tk.Tk()
