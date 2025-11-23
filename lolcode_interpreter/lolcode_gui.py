@@ -722,12 +722,6 @@ class LOLCodeInterpreterGUI:
             file_info['button'].config(text=os.path.basename(filename))
             self.save_file()
 
-    def clear_tables(self):
-        pass
-
-    def update_console(self, text, newline=True):
-        pass
-
 if __name__ == "__main__":
     root = tk.Tk()
     LOLCodeInterpreterGUI(root)
