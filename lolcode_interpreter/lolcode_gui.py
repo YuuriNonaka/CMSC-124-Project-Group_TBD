@@ -154,6 +154,15 @@ class LOLCodeInterpreterGUI:
 
         subtitle_label.pack(side=tk.RIGHT, padx=20)
 
+    def toggle_sidebar(self):
+        if self.sidebar_visible:
+            self.sidebar_container.pack_forget()
+            self.collapse_btn.config(text="▶")
+        else:
+            self.sidebar_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, before=self.collapse_btn.master)
+            self.collapse_btn.config(text="◀")
+        self.sidebar_visible = not self.sidebar_visible
+
 if __name__ == "__main__":
     root = tk.Tk()
     LOLCodeInterpreterGUI(root)
