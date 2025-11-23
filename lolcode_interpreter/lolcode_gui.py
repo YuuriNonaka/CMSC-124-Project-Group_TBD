@@ -75,9 +75,26 @@ class LOLCodeInterpreterGUI:
         file_menu.add_command(label="Exit", command=self.root.quit)
         file_btn.config(menu=file_menu)
         
-        # center logo placeholder
-        logo_label = tk.Label(header, text="LOLCODE LOGO", bg=self.header_bg,
-                            fg="black", font=("Arial", 12, "bold"))
+        # center logo with image
+        try:     
+            logo_path = os.path.join(script_dir, "logo_lolcode.png")
+            pil_image = Image.open(logo_path)
+            
+            # max height for aspect ratio
+            max_height = 80
+            aspect_ratio = pil_image.width / pil_image.height
+            new_height = max_height
+            new_width = int(aspect_ratio * new_height)
+            
+            pil_image = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            logo_img = ImageTk.PhotoImage(pil_image)
+            self.logo_img = logo_img
+            logo_label = tk.Label(header, image=logo_img, bg=self.header_bg)
+        except Exception as e:
+            print(f"Logo error: {e}")
+            logo_label = tk.Label(header, text="LOLCODE LOGO", bg=self.header_bg,
+                                fg="black", font=("Arial", 12, "bold"))
+
         logo_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
         # right side title
