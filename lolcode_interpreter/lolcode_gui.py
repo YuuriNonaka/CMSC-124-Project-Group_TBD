@@ -255,7 +255,7 @@ class LOLCodeInterpreterGUI:
         vsb = tk.Scrollbar(content_frame, orient="vertical")
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # treeview 
+        # Treeview (without headings since we made custom ones)
         tree = ttk.Treeview(content_frame, columns=columns, show="tree",
                         yscrollcommand=vsb.set, selectmode='none')
         tree['show'] = ''  # hide tree column
@@ -270,7 +270,7 @@ class LOLCodeInterpreterGUI:
         tree.bind("<Button-1>", lambda e: "break")
         tree.bind("<ButtonRelease-1>", lambda e: "break")
         
-        # style for tables
+        # styling for tables
         style = ttk.Style()
         style.configure("Light.Treeview",
                     background="white",
