@@ -507,13 +507,52 @@ class LOLCodeInterpreterGUI:
         print("Execute clicked")
 
     def update_line_numbers(self, event=None):
-        pass
+        if not self.current_tab_id or self.current_tab_id not in self.open_files:
+            return
+        
+        text_editor = self.open_files[self.current_tab_id]['widget']
+        
+        # get line count from text widget
+        line_count = int(text_editor.index('end-1c').split('.')[0])
+        
+        # generate line numbers
+        line_numbers_string = "\n".join(str(i) for i in range(1, line_count + 1))
+        
+        # update line numbers with right alignment
+        self.line_numbers.config(state=tk.NORMAL)
+        self.line_numbers.delete("1.0", tk.END)
+        self.line_numbers.insert("1.0", line_numbers_string, "right")
+        self.line_numbers.config(state=tk.DISABLED)
+        
+        # sync scroll position
+        self.line_numbers.yview_moveto(text_editor.yview()[0])
 
     def on_text_scroll(self, *args):
-        pass
+        if not self.current_tab_id:
+            return
+        # sync line numbers when text editor scrolls
+        self.line_numbers.yview_moveto(float(args[0]))
+        # update scrollbar
+        scrollbar = self.editors_container.master.children.get('!scrollbar')
+        if scrollbar:
+            scrollbar.set(*args)
+
+    def on_scrollbar(self, *args):
+        if not self.current_tab_id:
+            return
+        text_editor = self.open_files[self.current_tab_id]['widget']
+        # scroll both text editor and line numbers
+        text_editor.yview(*args)
+        self.line_numbers.yview(*args)
 
     def on_mousewheel(self, event):
-        pass
+        if not self.current_tab_id:
+            return "break"
+        text_editor = self.open_files[self.current_tab_id]['widget']
+        # handle mousewheel scrolling
+        text_editor.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.line_numbers.yview_scroll(int(-1*(event.delta/120)), "units")
+        return "break"
 
     def save_file(self):
         pass
