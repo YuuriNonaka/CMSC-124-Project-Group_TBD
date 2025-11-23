@@ -43,19 +43,50 @@ class LOLCodeInterpreterGUI:
         self.create_layout()
     
     def create_layout(self):
-        self.root.configure(bg=self.header_bg)
     
+        self.root.configure(bg=self.header_bg)
+        
         # top header bar
         self.create_header()
         
-        # placeholder for content
-        content = tk.Frame(self.root, bg=self.sidebar_bg)
-        content.pack(fill=tk.BOTH, expand=True)
-        label = tk.Label(content, text="Content Area - Under Construction", 
-                        bg=self.sidebar_bg, font=("Arial", 14))
-        label.pack(expand=True)
-
+        # main content area
+        main_container = tk.Frame(self.root, bg=self.header_bg)
+        main_container.pack(fill=tk.BOTH, expand=True)
         
+        # left sidebar container w/ collapse button
+        left_container = tk.Frame(main_container, bg=self.header_bg)
+        left_container.pack(side=tk.LEFT, fill=tk.BOTH)
+        
+        # sidebarframe
+        self.sidebar_container = tk.Frame(left_container, bg=self.sidebar_bg, width=540)
+        self.sidebar_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # collapseible button
+        collapse_btn_frame = tk.Frame(left_container, bg=self.sidebar_bg, width=30)
+        collapse_btn_frame.pack(side=tk.LEFT, fill=tk.Y)
+        
+        self.collapse_btn = tk.Button(collapse_btn_frame, text="◀", bg=self.sidebar_bg,
+                                    fg="#7f8c8d", font=("Arial", 12, "bold"), border=0,
+                                    activebackground="#dfe4ea", cursor="hand2",
+                                    command=self.toggle_sidebar, relief=tk.FLAT)
+        self.collapse_btn.pack(expand=True, fill=tk.BOTH, pady=10)
+        
+        # sidebar (placeholder)
+        sidebar_label = tk.Label(self.sidebar_container, text="Sidebar", 
+                                bg=self.sidebar_bg, font=("Arial", 14))
+        sidebar_label.pack(pady=20)
+        
+        # main paned window
+        main_paned = tk.PanedWindow(main_container, orient=tk.HORIZONTAL, sashwidth=3, bg="#34495e")
+        main_paned.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # right placeholder
+        right_frame = tk.Frame(main_paned, bg=self.editor_bg)
+        main_paned.add(right_frame)
+        right_label = tk.Label(right_frame, text="Editor & Console", 
+                            bg=self.editor_bg, fg="white", font=("Arial", 14))
+        right_label.pack(expand=True)
+
     def create_header(self):
         header = tk.Frame(self.root, bg=self.header_bg, height=60)
         header.pack(fill=tk.X, side=tk.TOP)
@@ -77,11 +108,12 @@ class LOLCodeInterpreterGUI:
         
         # center logo with image
         try:     
+            # load and resize center logo
             logo_path = os.path.join(script_dir, "logo_lolcode.png")
             pil_image = Image.open(logo_path)
             
-            # max height for aspect ratio
-            max_height = 80
+            # max height for aspect ratio 
+            max_height = 80 
             aspect_ratio = pil_image.width / pil_image.height
             new_height = max_height
             new_width = int(aspect_ratio * new_height)
@@ -91,16 +123,36 @@ class LOLCodeInterpreterGUI:
             self.logo_img = logo_img
             logo_label = tk.Label(header, image=logo_img, bg=self.header_bg)
         except Exception as e:
-            print(f"Logo error: {e}")
-            logo_label = tk.Label(header, text="LOLCODE LOGO", bg=self.header_bg,
+            print(f"Center logo error: {e}")
+            import traceback
+            traceback.print_exc() 
+            logo_label = tk.Label(header, text="CUSTOM LOGO HERE", bg=self.header_bg,
                                 fg="black", font=("Arial", 12, "bold"))
 
         logo_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # right side title
-        title_label = tk.Label(header, text="OH HAI! I'M YR Interpreter!", bg=self.header_bg,
-                            fg="black", font=("Arial", 11))
-        title_label.pack(side=tk.RIGHT, padx=20)
+        # right side subtitle image
+        try:
+            #lLoad and resize subtitle image
+            subtitle_path = os.path.join(script_dir, "subtitle.png")
+            pil_subtitle = Image.open(subtitle_path)
+            
+            # max_height
+            max_height = 90  
+            aspect_ratio = pil_subtitle.width / pil_subtitle.height
+            new_height = max_height
+            new_width = int(aspect_ratio * new_height)
+            
+            pil_subtitle = pil_subtitle.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            subtitle_img = ImageTk.PhotoImage(pil_subtitle)
+            self.subtitle_img = subtitle_img
+            subtitle_label = tk.Label(header, image=subtitle_img, bg=self.header_bg)
+        except Exception as e:
+            print(f"Subtitle image error: {e}")
+            subtitle_label = tk.Label(header, text="OH HAI! I'M YR Interpreter!", bg=self.header_bg,
+                                    fg="black", font=("Arial", 11))
+
+        subtitle_label.pack(side=tk.RIGHT, padx=20)
 
 if __name__ == "__main__":
     root = tk.Tk()
