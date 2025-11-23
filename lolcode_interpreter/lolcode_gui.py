@@ -357,9 +357,25 @@ class LOLCodeInterpreterGUI:
         console_frame = tk.Frame(parent, bg=self.console_bg)
         parent.add(console_frame, height=200)
         
-        label = tk.Label(console_frame, text="Console Section", 
-                        bg=self.console_bg, fg=self.console_text, font=("Arial", 14))
-        label.pack(expand=True)
+        # console header
+        console_header = tk.Label(console_frame, text="LOLCode Shell", bg=self.console_bg,
+                                fg="#7f8c8d", font=("Consolas", 9, "bold"),
+                                anchor="w", padx=15, pady=5)
+        console_header.pack(fill=tk.X)
+        
+        # console text area
+        console_container = tk.Frame(console_frame, bg=self.console_bg)
+        console_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        
+        console_scroll = tk.Scrollbar(console_container)
+        console_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self.console = tk.Text(console_container, bg=self.console_bg, fg=self.console_text,
+                            font=("Consolas", 9), state=tk.DISABLED,
+                            yscrollcommand=console_scroll.set, borderwidth=0,
+                            highlightthickness=0, padx=5, pady=5)
+        self.console.pack(fill=tk.BOTH, expand=True)
+        console_scroll.config(command=self.console.yview)
 
     def new_file(self):
         print("New file clicked")
