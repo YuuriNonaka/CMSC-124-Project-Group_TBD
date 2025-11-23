@@ -71,10 +71,8 @@ class LOLCodeInterpreterGUI:
                                     command=self.toggle_sidebar, relief=tk.FLAT)
         self.collapse_btn.pack(expand=True, fill=tk.BOTH, pady=10)
         
-        # sidebar (placeholder)
-        sidebar_label = tk.Label(self.sidebar_container, text="Sidebar", 
-                                bg=self.sidebar_bg, font=("Arial", 14))
-        sidebar_label.pack(pady=20)
+        # create sidebar content
+        self.create_sidebar(self.sidebar_container)
         
         # main paned window
         main_paned = tk.PanedWindow(main_container, orient=tk.HORIZONTAL, sashwidth=3, bg="#34495e")
@@ -162,6 +160,77 @@ class LOLCodeInterpreterGUI:
             self.sidebar_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, before=self.collapse_btn.master)
             self.collapse_btn.config(text="◀")
         self.sidebar_visible = not self.sidebar_visible
+
+    def create_sidebar(self, parent):
+        # top padding frame (for margin)
+        top_margin = tk.Frame(parent, bg=self.sidebar_bg, height=10)
+        top_margin.pack(fill=tk.X, side=tk.TOP)
+        
+        # container for notebook
+        notebook_container = tk.Frame(parent, bg=self.sidebar_bg)
+        notebook_container.pack(fill=tk.BOTH, expand=True, padx=(10, 0), pady=0)
+        
+        # botebook for tabs
+        style = ttk.Style()
+        style.theme_use('default')
+        
+        # remove borders and fill width
+        style.configure('Custom.TNotebook',
+                    background=self.sidebar_bg,
+                    borderwidth=0,
+                    tabmargins=[0, 0, 0, 0])
+        
+        # change tabs to fill width and use proper colors
+        style.configure('Custom.TNotebook.Tab',
+                    background='#c8ff00',  # if unselected
+                    foreground='#000000',
+                    padding=[100, 12],  
+                    font=('Arial', 11, 'bold'),
+                    borderwidth=0,
+                    focuscolor='none')
+        
+        style.map('Custom.TNotebook.Tab',
+                background=[('selected', '#a8d000'), ('active', '#b8ef00')],  # when selected
+                foreground=[('selected', '#000000')])
+        
+        # remove the white border between tabs
+        style.layout('Custom.TNotebook.Tab', [
+            ('Notebook.tab', {
+                'sticky': 'nswe',
+                'children': [
+                    ('Notebook.padding', {
+                        'side': 'top',
+                        'sticky': 'nswe',
+                        'children': [
+                            ('Notebook.label', {'side': 'top', 'sticky': ''})
+                        ]
+                    })
+                ]
+            })
+        ])
+        
+        # configure pane to remove gaps
+        style.configure('Custom.TNotebook', tabmargins=0, relief='flat')
+        
+        notebook = ttk.Notebook(notebook_container, style='Custom.TNotebook')
+        notebook.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+        
+        # lexemes tab
+        lexemes_frame = tk.Frame(notebook, bg=self.sidebar_bg)
+        notebook.add(lexemes_frame, text='Lexemes')
+        self.lexemes_tree = self.create_table(lexemes_frame, ["Lexeme", "Classification"])
+        
+        # symbol table tab
+        symbols_frame = tk.Frame(notebook, bg=self.sidebar_bg)
+        notebook.add(symbols_frame, text='Symbol Table')
+        self.symbol_tree = self.create_table(symbols_frame, ["Identifier", "Value"])
+
+    def create_table(self, parent, columns):
+        # placeholder for table - will implement in next commit
+        placeholder = tk.Label(parent, text=f"Table: {columns}", 
+                            bg=self.sidebar_bg, font=("Arial", 10))
+        placeholder.pack(expand=True)
+        return None
 
 if __name__ == "__main__":
     root = tk.Tk()
