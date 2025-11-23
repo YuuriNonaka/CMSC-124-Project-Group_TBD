@@ -378,10 +378,145 @@ class LOLCodeInterpreterGUI:
         console_scroll.config(command=self.console.yview)
 
     def new_file(self):
-        print("New file clicked")
+        tab_id = "untitled_tab"
+        
+        # if untitled tab already exists, just switch to it
+        if tab_id in self.open_files:
+            self.switch_tab(tab_id)
+            return
+        
+        # create text editor
+        text_editor = tk.Text(self.editors_container, wrap="none",
+                            yscrollcommand=self.on_text_scroll,
+                            font=("Consolas", 10), bg=self.editor_bg,
+                            fg=self.editor_text, insertbackground="white",
+                            padx=5, pady=5, borderwidth=0, highlightthickness=0,
+                            selectbackground="#3498db", spacing1=0, spacing3=0)
+        
+        # bind events
+        text_editor.bind("<KeyRelease>", self.update_line_numbers)
+        text_editor.bind("<MouseWheel>", self.on_mousewheel)
+        text_editor.bind("<ButtonRelease-1>", self.update_line_numbers)
+        
+        # store file info
+        self.open_files[tab_id] = {
+            'path': None,
+            'content': '',
+            'widget': text_editor,
+            'original': '',
+            'button': None
+        }
+        
+        # create tab button
+        self.create_tab_button(tab_id, "Untitled")
+        
+        # switch to new tab
+        self.switch_tab(tab_id)
+
+    def create_tab_button(self, tab_id, display_name):
+        tab_frame = tk.Frame(self.tabs_frame, bg="#34495e")
+        tab_frame.pack(side=tk.LEFT, padx=2)
+        
+        # tab button
+        tab_btn = tk.Button(tab_frame, text=display_name, bg="#34495e", fg="white",
+                        font=("Consolas", 9), padx=12, pady=5, border=0,
+                        cursor="hand2", activebackground="#4a5f7a",
+                        command=lambda: self.switch_tab(tab_id))
+        tab_btn.pack(side=tk.LEFT)
+        
+        # cose button
+        close_btn = tk.Button(tab_frame, text="×", bg="#34495e", fg="#95a5a6",
+                            font=("Arial", 12, "bold"), padx=5, pady=0, border=0,
+                            cursor="hand2", activebackground="#e74c3c",
+                            activeforeground="white",
+                            command=lambda: self.close_tab(tab_id))
+        close_btn.pack(side=tk.LEFT)
+        
+        self.open_files[tab_id]['button'] = tab_btn
+        self.open_files[tab_id]['tab_frame'] = tab_frame
+
+    def switch_tab(self, tab_id):
+        if tab_id not in self.open_files:
+            return
+        
+        # save current tab content
+        if self.current_tab_id and self.current_tab_id in self.open_files:
+            current_widget = self.open_files[self.current_tab_id]['widget']
+            self.open_files[self.current_tab_id]['content'] = current_widget.get(1.0, tk.END)
+            current_widget.pack_forget()
+            # reset button color
+            self.open_files[self.current_tab_id]['button'].config(bg="#34495e")
+        
+        # show new tab
+        self.current_tab_id = tab_id
+        new_widget = self.open_files[tab_id]['widget']
+        new_widget.pack(fill=tk.BOTH, expand=True)
+        
+        # highlight active tab
+        self.open_files[tab_id]['button'].config(bg="#4a5f7a")
+        
+        # update line numbers
+        self.update_line_numbers()
+        
+        # configure scrollbar
+        scrollbar = self.editors_container.master.children.get('!scrollbar')
+        if scrollbar:
+            scrollbar.config(command=new_widget.yview)
+            new_widget.config(yscrollcommand=self.on_text_scroll)
+
+    def close_tab(self, tab_id):
+        if tab_id not in self.open_files:
+            return
+        
+        # check for unsaved changes
+        file_info = self.open_files[tab_id]
+        current_content = file_info['widget'].get(1.0, tk.END).strip()
+        if current_content != file_info['original'].strip():
+            filename = file_info['path'] if file_info['path'] else "Untitled"
+            res = messagebox.askyesnocancel("Unsaved Changes",
+                                        f"Save changes to {os.path.basename(filename)}?")
+            if res:
+                old_tab = self.current_tab_id
+                self.current_tab_id = tab_id
+                self.save_file()
+                self.current_tab_id = old_tab
+            elif res is None:
+                return
+        
+        # remove tab
+        file_info['widget'].destroy()
+        file_info['tab_frame'].destroy()
+        del self.open_files[tab_id]
+        
+        # switch to another tab or clear editor
+        if self.current_tab_id == tab_id:
+            if self.open_files:
+                self.switch_tab(list(self.open_files.keys())[0])
+            else:
+                # No tabs left, clear everything
+                self.current_tab_id = None
+                self.line_numbers.config(state=tk.NORMAL)
+                self.line_numbers.delete("1.0", tk.END)
+                self.line_numbers.config(state=tk.DISABLED)
+
+    def close_current_tab(self):
+        if self.current_tab_id:
+            self.close_tab(self.current_tab_id)
 
     def execute(self):
         print("Execute clicked")
+
+    def update_line_numbers(self, event=None):
+        pass
+
+    def on_text_scroll(self, *args):
+        pass
+
+    def on_mousewheel(self, event):
+        pass
+
+    def save_file(self):
+        pass
 
 if __name__ == "__main__":
     root = tk.Tk()
