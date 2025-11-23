@@ -226,11 +226,70 @@ class LOLCodeInterpreterGUI:
         self.symbol_tree = self.create_table(symbols_frame, ["Identifier", "Value"])
 
     def create_table(self, parent, columns):
-        # placeholder for table - will implement in next commit
-        placeholder = tk.Label(parent, text=f"Table: {columns}", 
-                            bg=self.sidebar_bg, font=("Arial", 10))
-        placeholder.pack(expand=True)
-        return None
+        container = tk.Frame(parent, bg=self.sidebar_bg)
+        container.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+        
+        # header frame with custom height
+        header_container = tk.Frame(container, bg=self.sidebar_bg)
+        header_container.pack(fill=tk.X, padx=0, pady=0)
+        
+        header_frame = tk.Frame(header_container, bg=self.table_header, height=40)
+        header_frame.pack(fill=tk.BOTH, padx=0, pady=0)
+        header_frame.pack_propagate(False)
+        
+        # column headers
+        for i, col in enumerate(columns):
+            header_label = tk.Label(header_frame, text=col, bg=self.table_header,
+                                fg="white", font=('Arial', 10, 'bold'), anchor='center')
+            header_label.place(relx=i/len(columns), rely=0, relwidth=1/len(columns), relheight=1)
+        
+        # table content frame 
+        table_frame = tk.Frame(container, bg=self.sidebar_bg)
+        table_frame.pack(fill=tk.BOTH, expand=True, padx=0, pady=(0, 10))
+        
+        # inner white frame for content
+        content_frame = tk.Frame(table_frame, bg="white")
+        content_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # scrollbar
+        vsb = tk.Scrollbar(content_frame, orient="vertical")
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # treeview 
+        tree = ttk.Treeview(content_frame, columns=columns, show="tree",
+                        yscrollcommand=vsb.set, selectmode='none')
+        tree['show'] = ''  # hide tree column
+        
+        for col in columns:
+            tree.column(col, width=250, anchor="w")
+        
+        tree.pack(fill=tk.BOTH, expand=True)
+        vsb.config(command=tree.yview)
+        
+        # no no clicking
+        tree.bind("<Button-1>", lambda e: "break")
+        tree.bind("<ButtonRelease-1>", lambda e: "break")
+        
+        # style for tables
+        style = ttk.Style()
+        style.configure("Light.Treeview",
+                    background="white",
+                    fieldbackground="white",
+                    foreground="#2c3e50",
+                    rowheight=25,
+                    borderwidth=0)
+        
+        style.map("Light.Treeview",
+                background=[("selected", "white")],
+                foreground=[("selected", "#2c3e50")])
+        
+        tree.configure(style="Light.Treeview")
+        
+        # for alternating row colors
+        tree.tag_configure("oddrow", background="#f8f9fa")
+        tree.tag_configure("evenrow", background="white")
+        
+        return tree
 
 if __name__ == "__main__":
     root = tk.Tk()
