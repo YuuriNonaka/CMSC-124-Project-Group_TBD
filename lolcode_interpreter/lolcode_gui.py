@@ -504,7 +504,84 @@ class LOLCodeInterpreterGUI:
             self.close_tab(self.current_tab_id)
 
     def execute(self):
-        print("Execute clicked")
+        if not self.current_tab_id:
+            return
+        
+        source_code = self.open_files[self.current_tab_id]['widget'].get(1.0, tk.END)
+        
+        if not source_code.strip():
+            messagebox.showwarning("Warning", "No code to execute!")
+            return
+        
+        # clear console
+        self.console.config(state=tk.NORMAL)
+        self.console.delete(1.0, tk.END)
+        self.console.config(state=tk.DISABLED)
+        
+        try:
+            # lexical analysis
+            self.tokens = tokenize_program(source_code)
+            self.update_lexemes()
+            
+            # syntax analysis
+            parser = Parser(self.tokens)
+            ast = parser.parse()
+            
+            # semantic analysis
+            def gui_print(text):
+                self.update_console(text, newline=False)
+            
+            def gui_input():
+                return simpledialog.askstring("GIMMEH", "Enter Value: ")
+            
+            symbol_table = interpret(ast, gui_print, gui_input)
+            self.update_symbols(symbol_table)
+            
+            self.update_console(
+                f"\nSyntax check passed!\n"
+                f"Total tokens: {len(self.tokens)}\n"
+                f"Variables declared: {len(symbol_table)}"
+            )
+        except LOLSyntaxError as e:
+            self.update_console(f"SYNTAX ERROR:\n{str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
+            self.update_console(f"ERROR: {str(e)}")
+
+    def clear_tables(self):
+        for tree in [self.lexemes_tree, self.symbol_tree]:
+            for item in tree.get_children():
+                tree.delete(item)
+
+    def update_lexemes(self):
+        # clear only lexemes
+        for item in self.lexemes_tree.get_children():
+            self.lexemes_tree.delete(item)
+        
+        filtered = [t for t in self.tokens if t[1] != TokenType.LINEBREAK]
+        
+        for i, (lexeme, token_type, _) in enumerate(filtered):
+            desc = TOKEN_DESCRIPTIONS.get(token_type, token_type.value)
+            tag = "evenrow" if i % 2 == 0 else "oddrow"
+            self.lexemes_tree.insert("", tk.END, values=(lexeme, desc), tags=(tag,))
+
+    def update_symbols(self, symbols):
+        # clear only symbols
+        for item in self.symbol_tree.get_children():
+            self.symbol_tree.delete(item)
+        
+        for i, (name, val) in enumerate(symbols.items()):
+            display_value = lol_to_str(val)
+            tag = "evenrow" if i % 2 == 0 else "oddrow"
+            self.symbol_tree.insert("", tk.END, values=(name, display_value), tags=(tag,))
+
+    def update_console(self, text, newline=True):
+        self.console.config(state=tk.NORMAL)
+        if newline and not text.endswith("\n"):
+            text += "\n"
+        self.console.insert(tk.END, text)
+        self.console.see(tk.END)
+        self.console.config(state=tk.DISABLED)
 
     def update_line_numbers(self, event=None):
         if not self.current_tab_id or self.current_tab_id not in self.open_files:
