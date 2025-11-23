@@ -104,9 +104,9 @@ class LOLCodeInterpreterGUI:
         file_btn.pack(side=tk.LEFT, padx=20, pady=10)
         
         file_menu = tk.Menu(file_btn, tearoff=0, bg="#34495e", fg="white")
-        file_menu.add_command(label="Open", command=lambda: print("Open"))
-        file_menu.add_command(label="Save", command=lambda: print("Save"))
-        file_menu.add_command(label="Save As...", command=lambda: print("Save As"))
+        file_menu.add_command(label="Open", command=self.open_file)
+        file_menu.add_command(label="Save", command=self.save_file)
+        file_menu.add_command(label="Save As...", command=self.save_file_as)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
         file_btn.config(menu=file_menu)
@@ -554,7 +554,101 @@ class LOLCodeInterpreterGUI:
         self.line_numbers.yview_scroll(int(-1*(event.delta/120)), "units")
         return "break"
 
+    # file operations
+    def open_file(self):
+        filename = filedialog.askopenfilename(
+            filetypes=[("LOLCode", "*.lol"), ("Text", "*.txt"), ("All Files", "*.*")])
+        
+        if not filename:
+            return
+        
+        # check if file is already open
+        for tab_id, file_info in self.open_files.items():
+            if file_info['path'] == filename:
+                self.switch_tab(tab_id)
+                return
+        
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            # create new tab
+            self.tab_counter += 1
+            tab_id = f"tab_{self.tab_counter}"
+            
+            # create text editor
+            text_editor = tk.Text(self.editors_container, wrap="none",
+                                yscrollcommand=self.on_text_scroll,
+                                font=("Consolas", 10), bg=self.editor_bg,
+                                fg=self.editor_text, insertbackground="white",
+                                padx=5, pady=5, borderwidth=0, highlightthickness=0,
+                                selectbackground="#3498db", spacing1=0, spacing3=0)
+            
+            text_editor.insert(tk.END, content)
+            
+            # bind events
+            text_editor.bind("<KeyRelease>", self.update_line_numbers)
+            text_editor.bind("<MouseWheel>", self.on_mousewheel)
+            text_editor.bind("<ButtonRelease-1>", self.update_line_numbers)
+            
+            # store file info
+            self.open_files[tab_id] = {
+                'path': filename,
+                'content': content,
+                'widget': text_editor,
+                'original': content,
+                'button': None
+            }
+            
+            # create tab button
+            self.create_tab_button(tab_id, os.path.basename(filename))
+            
+            # switch to new tab
+            self.switch_tab(tab_id)
+            
+            self.clear_tables()
+            self.update_console(f"Opened: {filename}")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
     def save_file(self):
+        if not self.current_tab_id:
+            return
+        
+        file_info = self.open_files[self.current_tab_id]
+        
+        if not file_info['path']:
+            return self.save_file_as()
+        
+        try:
+            content = file_info['widget'].get(1.0, tk.END)
+            with open(file_info['path'], "w", encoding="utf-8") as f:
+                f.write(content)
+            file_info['original'] = content
+            messagebox.showinfo("Saved", "File saved successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def save_file_as(self):
+        if not self.current_tab_id:
+            return
+        
+        file_info = self.open_files[self.current_tab_id]
+        
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".lol",
+            filetypes=[("LOLCode", "*.lol"), ("Text", "*.txt"), ("All Files", "*.*")])
+        
+        if filename:
+            file_info['path'] = filename
+            # update tab name
+            file_info['button'].config(text=os.path.basename(filename))
+            self.save_file()
+
+    def clear_tables(self):
+        pass
+
+    def update_console(self, text, newline=True):
         pass
 
 if __name__ == "__main__":
