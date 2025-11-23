@@ -302,9 +302,56 @@ class LOLCodeInterpreterGUI:
         editor_frame = tk.Frame(parent, bg=self.editor_bg)
         parent.add(editor_frame, height=500)
         
-        label = tk.Label(editor_frame, text="Editor Section", 
-                        bg=self.editor_bg, fg="white", font=("Arial", 14))
-        label.pack(expand=True)
+        # file tabs container
+        tabs_container = tk.Frame(editor_frame, bg=self.editor_bg)
+        tabs_container.pack(fill=tk.X, padx=10, pady=(10, 0))
+        
+        # scrollable tabs frame
+        tabs_canvas = tk.Canvas(tabs_container, bg=self.editor_bg, height=35, highlightthickness=0)
+        tabs_scrollbar = tk.Scrollbar(tabs_container, orient="horizontal", command=tabs_canvas.xview)
+        self.tabs_frame = tk.Frame(tabs_canvas, bg=self.editor_bg)
+        
+        tabs_canvas.create_window((0, 0), window=self.tabs_frame, anchor="nw")
+        tabs_canvas.configure(xscrollcommand=tabs_scrollbar.set)
+        
+        tabs_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.tabs_frame.bind("<Configure>", lambda e: tabs_canvas.configure(scrollregion=tabs_canvas.bbox("all")))
+        self.tabs_canvas = tabs_canvas
+        
+        # file button
+        new_file_btn = tk.Button(self.tabs_frame, text="+", bg="#34495e", fg="white",
+                                font=("Arial", 12, "bold"), padx=10, pady=2,
+                                border=0, command=self.new_file, cursor="hand2",
+                                activebackground="#4a5f7a")
+        new_file_btn.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # run code button
+        run_btn = tk.Button(tabs_container, text="▶ Run Code", bg=self.accent_yellow,
+                        fg="#2c3e50", font=("Arial", 11, "bold"), padx=15, pady=5,
+                        border=0, command=self.execute, cursor="hand2",
+                        activebackground="#c4ef00")
+        run_btn.pack(side=tk.RIGHT, padx=(10, 0))
+        
+        # editor container with line numbers
+        editor_container = tk.Frame(editor_frame, bg=self.editor_bg)
+        editor_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        # line numbers
+        self.line_numbers = tk.Text(editor_container, width=5, bg=self.editor_bg,
+                                    fg="#4a5f7a", font=("Consolas", 10), state=tk.DISABLED,
+                                    padx=10, pady=5, borderwidth=0, highlightthickness=0,
+                                    spacing1=0, spacing3=0)
+        self.line_numbers.pack(side=tk.LEFT, fill=tk.Y)
+        self.line_numbers.tag_configure("right", justify="right")
+        
+        # scrollbar
+        scrollbar = tk.Scrollbar(editor_container)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # container for text editor
+        self.editors_container = tk.Frame(editor_container, bg=self.editor_bg)
+        self.editors_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def create_console_section(self, parent):
         console_frame = tk.Frame(parent, bg=self.console_bg)
@@ -313,6 +360,12 @@ class LOLCodeInterpreterGUI:
         label = tk.Label(console_frame, text="Console Section", 
                         bg=self.console_bg, fg=self.console_text, font=("Arial", 14))
         label.pack(expand=True)
+
+    def new_file(self):
+        print("New file clicked")
+
+    def execute(self):
+        print("Execute clicked")
 
 if __name__ == "__main__":
     root = tk.Tk()
