@@ -44,10 +44,46 @@ class LOLCodeInterpreterGUI:
     
     def create_layout(self):
         self.root.configure(bg=self.header_bg)
-        # placeholder muna
-        label = tk.Label(self.root, text="LOLCode Interpreter - Under Construction :)", 
-                        bg=self.header_bg, font=("Arial", 16, "bold"))
+    
+        # top header bar
+        self.create_header()
+        
+        # placeholder for content
+        content = tk.Frame(self.root, bg=self.sidebar_bg)
+        content.pack(fill=tk.BOTH, expand=True)
+        label = tk.Label(content, text="Content Area - Under Construction", 
+                        bg=self.sidebar_bg, font=("Arial", 14))
         label.pack(expand=True)
+
+        
+    def create_header(self):
+        header = tk.Frame(self.root, bg=self.header_bg, height=60)
+        header.pack(fill=tk.X, side=tk.TOP)
+        header.pack_propagate(False)
+        
+        # file menu button
+        file_btn = tk.Menubutton(header, text="File", bg=self.header_bg, fg="black",
+                                font=("Arial", 11), activebackground="#d6d6d6",
+                                relief=tk.FLAT, cursor="hand2")
+        file_btn.pack(side=tk.LEFT, padx=20, pady=10)
+        
+        file_menu = tk.Menu(file_btn, tearoff=0, bg="#34495e", fg="white")
+        file_menu.add_command(label="Open", command=lambda: print("Open"))
+        file_menu.add_command(label="Save", command=lambda: print("Save"))
+        file_menu.add_command(label="Save As...", command=lambda: print("Save As"))
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.quit)
+        file_btn.config(menu=file_menu)
+        
+        # center logo placeholder
+        logo_label = tk.Label(header, text="LOLCODE LOGO", bg=self.header_bg,
+                            fg="black", font=("Arial", 12, "bold"))
+        logo_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # right side title
+        title_label = tk.Label(header, text="OH HAI! I'M YR Interpreter!", bg=self.header_bg,
+                            fg="black", font=("Arial", 11))
+        title_label.pack(side=tk.RIGHT, padx=20)
 
 if __name__ == "__main__":
     root = tk.Tk()
