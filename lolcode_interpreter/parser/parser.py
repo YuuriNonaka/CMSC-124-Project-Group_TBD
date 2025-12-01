@@ -214,29 +214,38 @@ class Parser: #uses recursive descent
             )
 
     def parse_visible_statement(self):
-        #parses VISIBLE statement: output one or more expressions separated by spaces
+        #parses VISIBLE statement: output one or more expressions separated by spaces or +
         self.expect(TokenType.VISIBLE)
-        
+    
         #requires at least one expression
         if not self.is_expression_start():
             line_num = self.current_token[2] if self.current_token else "EOF"
             raise SyntaxError(f"VISIBLE requires at least one expression on line {line_num}")
-        
+    
         expressions = [] #collects expression nodes to output
-        
+    
         #parses first expression
         expr = self.parse_expression() #gets expression node
         expressions.append(expr)
+    
+        #parses additional expressions on the same line (space-separated or +-separated)
+        while self.current_token and self.current_token[1] != TokenType.LINEBREAK:
+            # skip the + separator
+            if self.match(TokenType.PLUS):
+                self.advance()
+                continue
         
-        #parses additional expressions on the same line (space-separated)
-        while self.current_token and self.is_expression_start() and self.current_token[1] != TokenType.LINEBREAK:
-            expr = self.parse_expression() #gets expression node
+            # if not an expression start, we're done
+            if not self.is_expression_start():
+                break
+        
+            expr = self.parse_expression() # gets expression node
             expressions.append(expr)
-        
+    
         #consumes the line break at the end of the statement if present
         if self.current_token and self.current_token[1] == TokenType.LINEBREAK:
             self.advance()
-        
+    
         return VisibleNode(expressions) #returns visible node with expressions
 
     def parse_gimmeh_statement(self):
