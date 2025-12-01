@@ -44,7 +44,7 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
             last_value = evaluate_expression(expression, symbol_table, function_table, gui_print, gui_input)
             outputs.append(lol_to_str(last_value))
 
-        output_string = "".join(outputs) # smoosh
+        output_string = "".join(outputs) # smoosh 
         gui_print(output_string + "\n") # for testing
         symbol_table["IT"] = last_value #shows the last value of the exp
 
