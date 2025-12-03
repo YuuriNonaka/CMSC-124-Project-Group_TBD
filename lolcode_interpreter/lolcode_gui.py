@@ -40,6 +40,11 @@ class LOLCodeInterpreterGUI:
         self.tokens = []
         self.sidebar_visible = True
         
+        # for terminal input
+        self.input_queue = []
+        self.waiting_for_input = False
+        self.execution_cancelled = False
+        
         self.create_layout()
     
     def create_layout(self):
@@ -373,9 +378,104 @@ class LOLCodeInterpreterGUI:
         self.console = tk.Text(console_container, bg=self.console_bg, fg=self.console_text,
                             font=("Consolas", 9), state=tk.DISABLED,
                             yscrollcommand=console_scroll.set, borderwidth=0,
-                            highlightthickness=0, padx=5, pady=5)
+                            highlightthickness=0, padx=5, pady=5,
+                            insertbackground=self.console_text)
         self.console.pack(fill=tk.BOTH, expand=True)
         console_scroll.config(command=self.console.yview)
+        
+        # bind key events for input
+        self.console.bind("<Key>", self.handle_console_key)
+        self.console.bind("<Return>", self.handle_console_return)
+        self.console.bind("<Button-1>", self.handle_console_click)
+        
+        # mark for input position tracking
+        self.input_start_mark = None
+
+    def handle_console_click(self, event):
+        # if waiting for input, restrict clicking to last line only
+        if self.waiting_for_input and self.input_start_mark:
+            # let the click happen first
+            self.console.update_idletasks()
+            
+            # then check if we need to move the cursor
+            def check_position():
+                current_pos = self.console.index(tk.INSERT)
+                if self.console.compare(current_pos, "<", self.input_start_mark):
+                    self.console.mark_set(tk.INSERT, self.input_start_mark)
+            
+            self.console.after(1, check_position)
+        elif not self.waiting_for_input:
+            # if not waiting for input, don't allow any cursor placement
+            return "break"
+
+    def handle_console_key(self, event):
+        # only allow typing when waiting for input
+        if not self.waiting_for_input:
+            return "break"
+        
+        # get current position and last line
+        current_pos = self.console.index(tk.INSERT)
+        last_line = self.console.index("end-1c").split('.')[0]
+        current_line = current_pos.split('.')[0]
+        
+        # only allow typing on the last line
+        if current_line != last_line:
+            # move cursor to end of last line
+            self.console.mark_set(tk.INSERT, f"{last_line}.end")
+            if event.char:
+                return
+        
+        # allow only if cursor is after input start mark
+        if self.input_start_mark:
+            if self.console.compare(tk.INSERT, "<", self.input_start_mark):
+                self.console.mark_set(tk.INSERT, self.input_start_mark)
+                if event.char:
+                    return
+        
+        # handle backspace - don't delete past input start
+        if event.keysym == 'BackSpace':
+            if self.console.compare(tk.INSERT, "<=", self.input_start_mark):
+                return "break"
+        
+        # handle delete key
+        if event.keysym == 'Delete':
+            if self.console.compare(tk.INSERT, "<", self.input_start_mark):
+                return "break"
+        
+        # handle left arrow - don't go past input start
+        if event.keysym == 'Left':
+            if self.console.compare(tk.INSERT, "<=", self.input_start_mark):
+                return "break"
+        
+        # handle Home key - go to input start
+        if event.keysym == 'Home':
+            self.console.mark_set(tk.INSERT, self.input_start_mark)
+            return "break"
+
+    def handle_console_return(self, event):
+        if not self.waiting_for_input:
+            return "break"
+        
+        # get input from marked position to end
+        if self.input_start_mark:
+            user_input = self.console.get(self.input_start_mark, tk.INSERT)
+            self.input_queue.append(user_input)
+            self.console.insert(tk.INSERT, "\n")
+            self.console.see(tk.END)
+            self.console.config(state=tk.DISABLED)
+            self.waiting_for_input = False
+            self.input_start_mark = None
+        
+        return "break"
+
+    def handle_input(self, event):
+        if self.waiting_for_input:
+            user_input = self.input_entry.get()
+            self.input_entry.delete(0, tk.END)
+            self.input_queue.append(user_input)
+            self.update_console(f">>> {user_input}\n")
+            self.waiting_for_input = False
+            self.input_entry.config(state=tk.DISABLED)
 
     def new_file(self):
         tab_id = "untitled_tab"
@@ -443,14 +543,14 @@ class LOLCodeInterpreterGUI:
         if self.current_tab_id and self.current_tab_id in self.open_files:
             current_widget = self.open_files[self.current_tab_id]['widget']
             self.open_files[self.current_tab_id]['content'] = current_widget.get(1.0, tk.END)
-            current_widget.pack_forget()
+            current_widget.pack_forget() # stores it in memory
             # reset button color
             self.open_files[self.current_tab_id]['button'].config(bg="#34495e")
         
         # show new tab
         self.current_tab_id = tab_id
         new_widget = self.open_files[tab_id]['widget']
-        new_widget.pack(fill=tk.BOTH, expand=True)
+        new_widget.pack(fill=tk.BOTH, expand=True) # makes it visible again
         
         # highlight active tab
         self.open_files[tab_id]['button'].config(bg="#4a5f7a")
@@ -514,9 +614,11 @@ class LOLCodeInterpreterGUI:
             return
         
         # clear console
-        self.console.config(state=tk.NORMAL)
         self.console.delete(1.0, tk.END)
-        self.console.config(state=tk.DISABLED)
+        
+        # clear input queue and reset cancellation flag
+        self.input_queue = []
+        self.execution_cancelled = False
         
         try:
             # lexical analysis
@@ -532,7 +634,25 @@ class LOLCodeInterpreterGUI:
                 self.update_console(text, newline=False)
             
             def gui_input():
-                return simpledialog.askstring("GIMMEH", "Enter Value: ")
+                self.waiting_for_input = True
+                self.console.config(state=tk.NORMAL)
+                self.console.focus()
+                self.input_start_mark = self.console.index(tk.INSERT)
+                
+                # wait for input with timeout to allow interrupts
+                while not self.input_queue and not self.execution_cancelled:
+                    try:
+                        self.root.update()
+                    except:
+                        self.waiting_for_input = False
+                        self.console.config(state=tk.DISABLED)
+                        self.execution_cancelled = True
+                        raise KeyboardInterrupt("Execution cancelled")
+                
+                if self.execution_cancelled:
+                    raise KeyboardInterrupt("Execution cancelled")
+                
+                return self.input_queue.pop(0)
             
             symbol_table = interpret(ast, gui_print, gui_input)
             self.update_symbols(symbol_table)
@@ -544,9 +664,16 @@ class LOLCodeInterpreterGUI:
             )
         except LOLSyntaxError as e:
             self.update_console(f"SYNTAX ERROR:\n{str(e)}")
+        except KeyboardInterrupt:
+            self.update_console(f"\nProgram interrupted by user.")
         except Exception as e:
-            messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
-            self.update_console(f"ERROR: {str(e)}")
+            if not self.execution_cancelled:
+                messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
+                self.update_console(f"ERROR: {str(e)}")
+        finally:
+            self.waiting_for_input = False
+            self.execution_cancelled = False
+            self.console.config(state=tk.DISABLED)
 
     def clear_tables(self):
         for tree in [self.lexemes_tree, self.symbol_tree]:
@@ -577,9 +704,7 @@ class LOLCodeInterpreterGUI:
 
     def update_console(self, text, newline=True):
         self.console.config(state=tk.NORMAL)
-        if newline and not text.endswith("\n"):
-            text += "\n"
-        self.console.insert(tk.END, text)
+        self.console.insert(tk.END, text if not newline or text.endswith("\n") else text + "\n")
         self.console.see(tk.END)
         self.console.config(state=tk.DISABLED)
 

@@ -81,6 +81,7 @@ class TokenType(Enum):
     #separator
     AN = "AN"
     MKAY = "MKAY"
+    PLUS = "+"
     
     #data types
     NUMBR = "NUMBR Literal"
@@ -190,6 +191,7 @@ TOKEN_DESCRIPTIONS = {
     #separators
     TokenType.AN: "Operand Separator",
     TokenType.MKAY: "Expression Delimiter",
+    TokenType.PLUS: "Expression Separator",
     
     #literals
     TokenType.NUMBR: "Integer Literal",
@@ -273,6 +275,7 @@ TOKEN_PATTERNS = [
     (r'\bGTFO\b', TokenType.GTFO),
     (r'\bAN\b', TokenType.AN),
     (r'\bMKAY\b', TokenType.MKAY),
+    (r'\+', TokenType.PLUS),
     
     #literals (before type keywords)
     (r'-?\d+\.\d+', TokenType.NUMBAR),  #float
