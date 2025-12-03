@@ -9,7 +9,7 @@ class Parser: #uses recursive descent
     
     def __init__(self, tokens): #initializes parser with the token list in lol_tokens
         #filters out linebreaks for easier parsing
-        self.tokens = [t for t in tokens if t[1] != TokenType.LINEBREAK]
+        self.tokens = tokens
         self.pos = 0
         self.current_token = self.tokens[0] if self.tokens else None
     
@@ -95,6 +95,9 @@ class Parser: #uses recursive descent
     def parse_main_body(self):
         #optional variable declarations using wazzup, followed by statements
         statements = [] #collects all statement nodes
+
+        while self.match(TokenType.LINEBREAK):
+            self.advance()
         
         if self.match(TokenType.WAZZUP):
             var_decls = self.parse_wazzup_block() #gets variable declaration nodes
@@ -116,6 +119,9 @@ class Parser: #uses recursive descent
         
         #parses all variable declarations until BUHBYE marker
         while self.current_token and not self.match(TokenType.BUHBYE):
+            if self.match(TokenType.LINEBREAK):
+                self.advance()
+                continue
             if self.match(TokenType.I_HAS_A):
                 decl_node = self.parse_variable_declaration() #gets declaration node
                 declarations.append(decl_node)
@@ -161,6 +167,10 @@ class Parser: #uses recursive descent
         
         token_type = self.current_token[1]
         line_num = self.current_token[2]
+
+        if token_type == TokenType.LINEBREAK:
+            self.advance()
+            return None
         
         #VISIBLE - output statement
         if token_type == TokenType.VISIBLE:
@@ -265,6 +275,12 @@ class Parser: #uses recursive descent
             self.advance()  #moves past R token
             expr = self.parse_expression() #gets expression node
             return AssignmentNode(var_name, expr) #returns assignment node
+        elif self.match(TokenType.IS_NOW_A):
+            self.advance()
+            if not self.match(TokenType.TYPE_NUMBR, TokenType.TYPE_NUMBAR, TokenType.TYPE_YARN, TokenType.TYPE_TROOF, TokenType.TYPE_NOOB):
+                raise SyntaxError("Expected type keyword after IS NOW A")
+            target_type = self.current_token[0]
+            return TypecastStatementNode(var_name, target_type)
         else:
             #if no R token, this is just a variable reference (valid as standalone expression)
             return VariableNode(var_name) #returns variable reference node
@@ -274,6 +290,9 @@ class Parser: #uses recursive descent
         self.expect(TokenType.O_RLY)
         
         conditional_node = ConditionalNode() #creates conditional node
+
+        if self.match(TokenType.LINEBREAK):
+                self.advance()
         
         #requires if block
         self.expect(TokenType.YA_RLY, "O RLY? must be followed by YA RLY")
@@ -319,6 +338,9 @@ class Parser: #uses recursive descent
         self.expect(TokenType.WTF)
         
         switch_node = SwitchNode() #creates switch node
+
+        if self.match(TokenType.LINEBREAK):
+                self.advance()
         
         #must have at least one case
         if not self.match(TokenType.OMG):

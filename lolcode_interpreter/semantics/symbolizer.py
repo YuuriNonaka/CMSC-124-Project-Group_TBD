@@ -27,6 +27,17 @@ def lol_to_num(value):
         return 0
     if value == "NOOB":
         return 0
+    
+    if isinstance(value, float):
+        return value
+    if isinstance(value, int):
+        return value
+    
+    if isinstance(value, str):
+        value = value.strip()
+        if value == "":
+            return 0
+
     try:
         return int(value)
     except(ValueError, TypeError):

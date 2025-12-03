@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 from PIL import Image, ImageTk
 import os, sys
+import traceback
 
 # import modules (tokenizer + symbolizer)
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -667,8 +668,9 @@ class LOLCodeInterpreterGUI:
         except KeyboardInterrupt:
             self.update_console(f"\nProgram interrupted by user.")
         except Exception as e:
+            # traceback.print_exc()
             if not self.execution_cancelled:
-                messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
+                # messagebox.showerror("Error", f"Analysis failed:\n{str(e)}")
                 self.update_console(f"ERROR: {str(e)}")
         finally:
             self.waiting_for_input = False
