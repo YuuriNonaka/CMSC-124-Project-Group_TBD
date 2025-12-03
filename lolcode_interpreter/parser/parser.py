@@ -172,6 +172,14 @@ class Parser: #uses recursive descent
             self.advance()
             return None
         
+        # FOR OIC PLSSS WORKK
+        if token_type == TokenType.OIC:
+            line_num = self.current_token[2]
+            raise SyntaxError(
+                f"Unexpected OIC on line {line_num}. "
+                f"OIC must close an O RLY? or WTF? block."
+            )
+        
         #VISIBLE - output statement
         if token_type == TokenType.VISIBLE:
             return self.parse_visible_statement() #returns visible node
@@ -280,6 +288,7 @@ class Parser: #uses recursive descent
             if not self.match(TokenType.TYPE_NUMBR, TokenType.TYPE_NUMBAR, TokenType.TYPE_YARN, TokenType.TYPE_TROOF, TokenType.TYPE_NOOB):
                 raise SyntaxError("Expected type keyword after IS NOW A")
             target_type = self.current_token[0]
+            self.advance()
             return TypecastStatementNode(var_name, target_type)
         else:
             #if no R token, this is just a variable reference (valid as standalone expression)

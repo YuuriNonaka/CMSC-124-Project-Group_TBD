@@ -83,14 +83,15 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
     elif isinstance(node, SwitchNode): # WTF
         switch_value = lol_to_str(symbol_table.get("IT", "NOOB"))
         executed_case = False
+        fall_through = False  
 
         try: # check all cases
             for case in node.cases:
-                if lol_to_str(case.literal_value) == switch_value:
-                    for statement  in case.statements:
-                        execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
+                if fall_through or lol_to_str(case.literal_value) == switch_value:
+                    fall_through = True  # Once we match, keep executing subsequent cases
                     executed_case = True
-                    break
+                    for statement in case.statements:
+                        execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
             
             if not executed_case: # acts as the default case
                 for statement in node.default_case:

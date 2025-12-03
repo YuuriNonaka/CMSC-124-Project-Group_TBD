@@ -131,19 +131,26 @@ def tokenize_program(source_code):
     tokens = []
     line_num = 1
     in_multiline_comment = False
+    multiline_comment_start_line = None  # OBTW TRACKER
     
     for line in lines:
         stripped = line.strip()
         
         #check for multiline comment start
         if re.match(r'\bOBTW\b', stripped, re.IGNORECASE):
+            if in_multiline_comment:
+                raise SyntaxError(f"Nested OBTW found on line {line_num}. Previous OBTW on line {multiline_comment_start_line} was not closed.")
             in_multiline_comment = True
+            multiline_comment_start_line = line_num
             line_num += 1
             continue
         
         #check for multiline comment end
         if re.match(r'\bTLDR\b', stripped, re.IGNORECASE):
+            if not in_multiline_comment:
+                raise SyntaxError(f"TLDR found on line {line_num} without matching OBTW.")
             in_multiline_comment = False
+            multiline_comment_start_line = None
             line_num += 1
             continue
         
@@ -162,6 +169,10 @@ def tokenize_program(source_code):
             tokens.append(('\\n', TokenType.LINEBREAK, line_num))
 
         line_num += 1
+
+    # check if multiline comment was never closed
+    if in_multiline_comment:
+        raise SyntaxError(f"Unclosed multiline comment: OBTW on line {multiline_comment_start_line} has no matching TLDR.")
 
     #remove the last linebreak if theres one
     if tokens and tokens[-1][1] == TokenType.LINEBREAK:
