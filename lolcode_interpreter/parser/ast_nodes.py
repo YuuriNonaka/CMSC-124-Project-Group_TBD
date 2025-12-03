@@ -75,6 +75,10 @@ class TypecastNode(ASTNode): #represents type casting operation
         self.expression = expression
         self.target_type = target_type
 
+class TypecastStatementNode(ASTNode):
+    def __init__(self, var_name, target_type):
+        self.var_name = var_name
+        self.target_type = target_type   
 
 class ConditionalNode(ASTNode): #represents if-else conditional structure
     def __init__(self): #initializes conditional with empty blocks

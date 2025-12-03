@@ -1,7 +1,9 @@
 import operator
 from parser.ast_nodes import *
 from lexer.lol_tokens import TokenType
-from semantics import bool_convert, lol_to_num, lol_to_str, format_result, InterpreterRuntimeError, BreakNode, ReturnNode
+from semantics import bool_convert, lol_to_num, lol_to_str, format_result, InterpreterRuntimeError
+from semantics import ReturnNode as ReturnException
+from semantics import BreakNode as BreakException
 
 def interpret(node, gui_print, gui_input):
     symbol_table = {'IT': 'NOOB'} # stores variables
@@ -93,7 +95,7 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
             if not executed_case: # acts as the default case
                 for statement in node.default_case:
                     execute_statement(statement, symbol_table, function_table, gui_print, gui_input)
-        except BreakNode:
+        except BreakException:
             pass
 
     elif isinstance(node, LoopNode): # loop / IM IN YR
@@ -122,20 +124,35 @@ def execute_statement(node, symbol_table, function_table, gui_print, gui_input):
                     symbol_table[node.var_name] = current_value + 1
                 elif node.operation == "NERFIN":
                     symbol_table[node.var_name] = current_value - 1
-        except BreakNode:
+        except BreakException:
             pass
     
+    elif isinstance(node, TypecastStatementNode):
+        if node.var_name not in symbol_table:
+            raise InterpreterRuntimeError(f"Variable {node.var_name} not declared")
+        
+        current_value = symbol_table[node.var_name]
+
+        if node.target_type == "NUMBR":
+            new_value = int(lol_to_num(current_value))
+        elif node.target_type == "NUMBAR":
+            new_value = float(lol_to_num(current_value))
+        elif node.target_type == "YARN":
+            new_value = lol_to_str(current_value)
+        elif node.target_type == "TROOF":
+            new_value = "WIN" if bool_convert(current_value) else "FAIL"
+        elif node.target_type == "NOOB":
+            new_value = "NOOB"
+        
+        symbol_table[node.var_name] = new_value
+    
     elif isinstance(node, BreakNode):
-        raise BreakNode()
+        raise BreakException()
 
     elif isinstance(node, ReturnNode):
         return_value = evaluate_expression(node.expression, symbol_table, function_table, gui_print, gui_input)
-        raise ReturnNode(return_value)
-    
-    elif isinstance(node, FunctionCallNode):
-        result = evaluate_expression(node, symbol_table, function_table, gui_print, gui_input)
-        symbol_table["IT"] = result
-    
+        raise ReturnException(return_value)
+
     else:
         val = evaluate_expression(node, symbol_table, function_table, gui_print, gui_input)
         symbol_table["IT"] = val
@@ -217,24 +234,30 @@ def evaluate_expression(node, symbol_table, function_table, gui_print, gui_input
             result = any(bool_convert(op) for op in operands)
             return format_result(result)
         
-    elif isinstance(node, FunctionCallNode): # I IZ
+    elif isinstance(node, FunctionCallNode):
+
         function_definition = function_table.get(node.func_name)
-        if not function_definition or len(node.arguments) != len(function_definition.parameters):
-            pass # function not defined or other errors
+
+        if not function_definition:
+            return "NOOB"
+        if len(node.arguments) != len(function_definition.parameters):
+            return "NOOB"
         
-        # evaluate argument in the top level scope
         argument_values = [evaluate_expression(argument, symbol_table, function_table, gui_print, gui_input) for argument in node.arguments]
 
-        local_symbtable = {"IT": symbol_table.get("IT", "NOOB")} # define its own symbol table
+        local_symbtable = {"IT": symbol_table.get("IT", "NOOB")}
         for parameters, argument_val in zip(function_definition.parameters, argument_values):
             local_symbtable[parameters] = argument_val
-
-        # execution
+        
         try:
             for statement in function_definition.statements:
                 execute_statement(statement, local_symbtable, function_table, gui_print, gui_input)
-        except ReturnNode as ret:
+        
+        except ReturnException as ret:
             return ret.value
+        
+        except BreakException:
+            return "NOOB"
     
         return "NOOB"
 
